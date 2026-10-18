@@ -11,7 +11,7 @@
   // 本地 Node mock server（4-local-demo/server.js）的 API 根路径
   var LOCAL_API = 'http://127.0.0.1:8787/api';
   // GAS 部署后，把下面这行替换成你的 Web App /exec 链接
-  var GAS_API = 'https://script.google.com/macros/s/AKfycbyIb5Xzhmcq7kD9DpFMGW2vDX_3d5jhZmkNIC-oxbg5VEosexHIlWGOT3PmjKDrMWI/exec?action=health';
+  var GAS_API = 'https://script.google.com/macros/s/AKfycbyIb5Xzhmcq7kD9DpFMGW2vDX_3d5jhZmkNIC-oxbg5VEosexHIlWGOT3PmjKDrMWI/exec';
 
   function resolveBase() {
     // 允许在浏览器控制台临时切换：localStorage.setItem('ces_api_base', '...')
