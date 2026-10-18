@@ -432,4 +432,22 @@ a { text-decoration: none; }
   .ces-stat-value { font-size: 1.45rem; }
   .ces-login-form { padding: 1.5rem; }
   .badge-mandatory, .role-badge { font-size: .7rem; }
+
+  /* v1.2 手機版後台：活動清單只留 編號／名稱／名額／狀態／操作，避免要一直左右滑 */
+  .ces-events-table .col-id,
+  .ces-events-table .col-category,
+  .ces-events-table .col-time,
+  .ces-events-table .col-regtime { display: none; }
+  .ces-events-table td:last-child .btn { display: block; width: 100%; margin: .25rem 0 0 0; }
+  .ces-events-table td:last-child .btn.me-1 { margin-right: 0 !important; }
+  .ces-events-table th, .ces-events-table td { padding: .5rem .35rem; font-size: .8rem; }
+  .ces-events-table { table-layout: fixed; width: 100%; }
+  .ces-events-table th:nth-child(6), .ces-events-table td:nth-child(6),
+  .ces-events-table th:nth-child(7), .ces-events-table td:nth-child(7) { display: none; }
+  .ces-events-table td:last-child { width: 5.4rem; }
+  .ces-events-table td:last-child .btn { font-size: .74rem; padding: .3rem .35rem; }
+
+  /* v1.2 手機版後台：點名／候補名單只留 學號／姓名／出席／操作 */
+  .col-class, .col-grade, .col-regtime { display: none; }
+  .table-ces th, .table-ces td { padding: .5rem .4rem; font-size: .82rem; }
 }

@@ -245,6 +245,10 @@
   }
 
   /* ---------- 統計卡 ---------- */
+  function isStaffAccount(u) {
+    return !!(u && u.role && u.role !== 'Student');
+  }
+
   function renderStats(data) {
     var events = Array.isArray(data.events) ? data.events : [];
     var now = data.now || nowText();
@@ -264,10 +268,39 @@
         !hasStarted(e, now);
     });
 
+    if (isStaffAccount(user)) {
+      /* v1.2：老師／管理員不報名，統計卡改成「我負責的活動」視角 */
+      var mine = events.filter(function (e) {
+        return e && e.status === 'Active' && e.hostID === user.userID;
+      });
+      var mineStarted = mine.filter(function (e) { return hasStarted(e, now); });
+      var mineOpen = mine.filter(function (e) {
+        return !hasStarted(e, now) && e.isRegOpen === true;
+      });
+      setLabel('statJoinedLabel', '我負責的活動');
+      setLabel('statUpcomingLabel', '即將舉行');
+      setLabel('statConfirmedLabel', '已開始');
+      setLabel('statTodoLabel', '報名中');
+      setText('statJoined', mine.length);
+      setText('statUpcoming', upcoming.length);
+      setText('statConfirmed', mineStarted.length);
+      setText('statTodo', mineOpen.length);
+      return;
+    }
+
+    setLabel('statJoinedLabel', '我的活動數');
+    setLabel('statUpcomingLabel', '即將舉行');
+    setLabel('statConfirmedLabel', '已報名');
+    setLabel('statTodoLabel', '待辦（可報名）');
     setText('statJoined', joined.length);
     setText('statUpcoming', upcoming.length);
     setText('statConfirmed', confirmed.length);
     setText('statTodo', todo.length);
+  }
+
+  function setLabel(id, value) {
+    var el = document.getElementById(id);
+    if (el && el.textContent !== value) el.textContent = value;
   }
 
   function setText(id, value) {

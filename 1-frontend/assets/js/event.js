@@ -214,6 +214,12 @@
     CES_UI.renderNav('events');
 
     var tabs = document.getElementById('eventTabs');
+    /* v1.2：非學生帳號沒有「報名」概念，隱藏 符合資格／已參加／未參加 三個 Tab */
+    if (tabs && !isStudentUser(user)) {
+      Array.prototype.forEach.call(tabs.querySelectorAll('[data-tab]'), function (b) {
+        if (b.getAttribute('data-tab') !== 'all') b.classList.add('d-none');
+      });
+    }
     if (tabs) {
       tabs.addEventListener('click', function (ev) {
         var btn = ev.target.closest('[data-tab]');
@@ -375,12 +381,19 @@
   }
 
   function myStatusCell(e) {
+    /* v1.2：老師／管理員不參與報名，沒有「我的狀態」 */
+    if (!isStudentUser(listState.user)) return '<span class="muted small">—</span>';
     if (!isActive(e)) return '<span class="badge-status is-cancelled">已取消</span>';
     return CES_UI.statusBadge(e.myStatus);
   }
 
   function eligibilityCell(e) {
     if (!isActive(e)) return '<span class="muted small">—</span>';
+    /* v1.2：資格限制是給學生看的；老師／管理員只顯示規則文字，不標紅「不符合資格」 */
+    if (!isStudentUser(listState.user)) {
+      var staffRules = eligibilityRules(e);
+      return '<span class="tag tag-soft" title="' + esc(staffRules) + '">' + esc(staffRules) + '</span>';
+    }
     if (e.isEligible === false) {
       var reason = e.eligibleReason || '不符合資格';
       return '<span class="small text-danger" title="' + esc(reason) + '">' + esc(reason) + '</span>';
@@ -459,11 +472,15 @@
   }
 
   function eventCardHtml(e) {
-    var statusHtml = isActive(e) ? CES_UI.statusBadge(e.myStatus) :
-      '<span class="badge-status is-cancelled">已取消</span>';
+    var statusHtml = isStudentUser(listState.user)
+      ? (isActive(e) ? CES_UI.statusBadge(e.myStatus) :
+        '<span class="badge-status is-cancelled">已取消</span>')
+      : '';
     var flags = '';
     if (isActive(e) && e.isFull) flags += '<span class="tag tag-soft">名額已滿</span>';
-    if (isActive(e) && e.isEligible === false) flags += '<span class="tag tag-soft">不符合資格</span>';
+    if (isActive(e) && isStudentUser(listState.user) && e.isEligible === false) {
+      flags += '<span class="tag tag-soft">不符合資格</span>';
+    }
 
     return '<div class="ces-card ces-event-card">' +
       '<div class="card-cover"></div>' +
@@ -629,23 +646,35 @@
         ? '<span class="badge-status is-cancelled">不符合資格</span>'
         : '<span class="badge-status is-confirmed">符合資格</span>';
 
+      var eligibilityRow;
+      if (!isStudentUser(detailState.user)) {
+        /* v1.2：老師／管理員只看到資格規則，不顯示「符合／不符合資格」 */
+        eligibilityRow = esc(eligibilityRules(e));
+      } else {
+        eligibilityRow = esc(eligibilityRules(e)) + ' ' + eligState +
+          (e.isEligible === false && e.eligibleReason
+            ? '<div class="small text-danger mt-1">' + esc(e.eligibleReason) + '</div>' : '');
+      }
+
+      var statusRow = live
+        ? '<span class="badge-status is-confirmed">' +
+          (isStudentUser(detailState.user) ? '開放報名' : '開放中') + '</span>'
+        : '<span class="badge-status is-cancelled">已取消</span>';
+
       infoBody.innerHTML =
         infoRow('活動編號', esc(e.eventID)) +
         infoRow('類別', e.category ? '<span class="tag">' + esc(e.category) + '</span>' : '<span class="muted">—</span>') +
         infoRow('參加性質', isMandatory(e) ? mandatoryBadge(e) +
           '<span class="muted small ms-2">老師點名，系統已自動報名，不可取消</span>' :
           '<span class="muted">自願報名</span>') +
-        infoRow('狀態', live ? '<span class="badge-status is-confirmed">開放報名</span>' :
-          '<span class="badge-status is-cancelled">已取消</span>') +
+        infoRow('狀態', statusRow) +
         infoRow('負責老師', esc(e.hostName || e.hostID || '—') +
           (e.hostID ? '<span class="muted small">（' + esc(e.hostID) + '）</span>' : '')) +
         infoRow('報名時間', esc(CES_UI.fmtDT(e.regStart)) + ' 至 ' + esc(CES_UI.fmtDT(e.regEnd))) +
         infoRow('活動時間', esc(CES_UI.fmtDT(e.eventStart)) + ' 至 ' + esc(CES_UI.fmtDT(e.eventEnd))) +
         infoRow('地點', esc(e.location)) +
         infoRow('名額', quotaBlockHtml(e)) +
-        infoRow('資格條件', esc(eligibilityRules(e)) + ' ' + eligState +
-          (e.isEligible === false && e.eligibleReason
-            ? '<div class="small text-danger mt-1">' + esc(e.eligibleReason) + '</div>' : '')) +
+        infoRow('資格條件', eligibilityRow) +
         infoRow('簡介', '<div class="text-break">' + description + '</div>');
     }
 

@@ -320,16 +320,18 @@
           : '';
 
         return '<tr>' +
-          '<td><span class="tag tag-soft">' + esc(ev.eventID) + '</span></td>' +
+          '<td class="col-id"><span class="tag tag-soft">' + esc(ev.eventID) + '</span></td>' +
           '<td>' +
             '<div class="fw-semibold">' + esc(ev.name) + mandatoryBadge + '</div>' +
             '<div class="muted small">' + esc(ev.location || '—') +
               (ev.hostName ? ' · 負責：' + esc(ev.hostName) : '') + '</div>' +
+            '<div class="d-sm-none muted small mt-1">名額 ' + esc(quotaText) + ' · ' +
+              (active ? '開放中' : '已取消') + '</div>' +
           '</td>' +
-          '<td><span class="tag">' + esc(ev.category || '其他') + '</span></td>' +
-          '<td class="text-nowrap">' + esc(CES_UI.fmtDT(ev.eventStart)) +
+          '<td class="col-category"><span class="tag">' + esc(ev.category || '其他') + '</span></td>' +
+          '<td class="text-nowrap col-time">' + esc(CES_UI.fmtDT(ev.eventStart)) +
             '<div class="muted small">至 ' + esc(CES_UI.fmtDT(ev.eventEnd)) + '</div></td>' +
-          '<td class="text-nowrap">' + esc(CES_UI.fmtDT(ev.regStart)) +
+          '<td class="text-nowrap col-regtime">' + esc(CES_UI.fmtDT(ev.regStart)) +
             '<div class="muted small">至 ' + esc(CES_UI.fmtDT(ev.regEnd)) + '</div></td>' +
           '<td class="text-nowrap">' + esc(quotaText) + '</td>' +
           '<td>' + statusHtml + '</td>' +
@@ -861,9 +863,9 @@
             return '<tr>' +
               '<td><span class="tag tag-soft">' + esc(p.userID) + '</span></td>' +
               '<td>' + esc(p.name) + '</td>' +
-              '<td>' + esc(p.class || '—') + '</td>' +
-              '<td>' + esc(p.grade || '—') + '</td>' +
-              '<td class="text-nowrap">' + esc(CES_UI.fmtDT(p.regTime)) + '</td>' +
+              '<td class="col-class">' + esc(p.class || '—') + '</td>' +
+              '<td class="col-grade">' + esc(p.grade || '—') + '</td>' +
+              '<td class="text-nowrap col-regtime">' + esc(CES_UI.fmtDT(p.regTime)) + '</td>' +
               '<td>' + (attended
                 ? '<span class="badge-status is-confirmed">已出席</span>'
                 : '<span class="badge-status is-none">未出席</span>') + '</td>' +
@@ -892,9 +894,9 @@
             return '<tr>' +
               '<td><span class="tag tag-soft">' + esc(p.userID) + '</span></td>' +
               '<td>' + esc(p.name) + '</td>' +
-              '<td>' + esc(p.class || '—') + '</td>' +
-              '<td>' + esc(p.grade || '—') + '</td>' +
-              '<td class="text-nowrap">' + esc(CES_UI.fmtDT(p.regTime)) + '</td>' +
+              '<td class="col-class">' + esc(p.class || '—') + '</td>' +
+              '<td class="col-grade">' + esc(p.grade || '—') + '</td>' +
+              '<td class="text-nowrap col-regtime">' + esc(CES_UI.fmtDT(p.regTime)) + '</td>' +
             '</tr>';
           }).join('');
         }

@@ -1,5 +1,5 @@
 {
-  "summary": "65/65",
+  "summary": "68/68",
   "results": [
     {
       "name": "login: 表單與版面渲染",
@@ -308,6 +308,21 @@
     {
       "name": "v1.2 UI: stats 無 JS 錯誤",
       "pass": true
+    },
+    {
+      "name": "v1.2 UI: 老師首頁統計卡改成「我負責的活動」視角",
+      "pass": true,
+      "detail": "{\"labels\":[\"我負責的活動\",\"即將舉行\",\"已開始\",\"報名中\"],\"values\":[\"6\",\"9\",\"0\",\"6\"]}"
+    },
+    {
+      "name": "v1.2 UI: 老師活動頁只剩「全部活動」Tab、我的狀態顯示 —",
+      "pass": true,
+      "detail": "{\"visible\":[\"全部活動\"],\"regBtns\":0,\"status\":[\"—\",\"—\",\"—\"]}"
+    },
+    {
+      "name": "v1.2 UI: 手機版後台清單不用左右滑（操作鈕在畫面內、名額顯示在名稱下方）",
+      "pass": true,
+      "detail": "{\"scrollW\":375,\"innerW\":375,\"btnRight\":336,\"quotaNote\":true,\"catShown\":\"none\"}"
     },
     {
       "name": "權限: 未登入訪問 admin 跳轉登入頁",
