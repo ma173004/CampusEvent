@@ -402,3 +402,85 @@ CLUB_OPTIONS  = ['學生會','美術學會','體育學會','音樂學會','戲�
 | `.chip-group` + `.chip-option`（內含 `<input type="checkbox">`） | 後台資格多選（班級/年級/學會） |
 | `.fc-event-mandatory` | 日曆「必須參加」事件配色 |
 | `.text-pending` | 灰字「活動尚未開始」提示 |
+
+---
+
+## 8. v1.2 變更（第二輪導師回饋）
+
+> 與第 7 節衝突時，以本節為準；本節未提及的部分沿用第 7 節與前文。
+
+### 8.1 報名只限學生（`registerEvent` / `cancelRegistration`）
+
+- 校內活動是**學生**的報名行為，教師／管理員只負責開活動與點名，不參與報名。
+- 兩支 API 在「使用者存在」檢查之後、其他業務檢查之前，加入角色檢查：
+
+  ```
+  if (user.role !== 'Student') → 錯誤碼 ROLE_NOT_ALLOWED
+     message「只有學生可以報名活動（教師／管理員帳號不需報名）」
+  ```
+
+- 錯誤碼表追加 `ROLE_NOT_ALLOWED`。
+- 檢查順序（`registerEvent`，其餘不變）：1 活動存在且 Active → **1.5 角色必須為 Student** → 2 資格 → 3 重複報名 → 4 報名窗口 → 5 已開始 → 6 撞期 → 7 名額／候補 → 8 寫表。
+- `cancelRegistration` 順序：使用者存在 → **角色必須為 Student** → 活動存在 → 必須參加（`MANDATORY_EVENT`）→ 有效報名存在（`NOT_REGISTERED`）→ 取消。
+- 既有種子資料沒有任何教師報名，故不需要資料遷移；若角色由 Student 改成 Teacher 而仍有報名，該筆報名保留但不應再操作（記入已知限制）。
+
+### 8.2 新增 action：`previewEligibility`（GET）
+
+用途：後台資格 chips 變更時，即時顯示「這樣設定會有多少學生符合」，同時把 AND/OR 語意講清楚。
+
+- 請求：`?action=previewEligibility&userID=T001&classes=1A,1B,1C&grades=S1&clubs=美術學會&requireOfficer=false`
+  - `classes` / `grades` / `clubs`：逗號分隔；空字串或 `ALL` 代表該欄「不限」。
+  - `requireOfficer`：`true` / `false`（預設 false）。
+- 權限：`requireOperator_(userID, ['Teacher','Admin'])`，否則 `NOT_AUTHORIZED`。
+- 驗證：三組值必須在白名單內（同 `manageEvent`），非法值 → `VALIDATION_ERROR`（訊息同 7.2）。
+- 成功 `data`：
+
+  ```json
+  {
+    "count": 3,
+    "students": [
+      { "userID": "S2201", "name": "王小明", "className": "5A", "grade": "S5", "clubs": ["美術學會","義工團"] }
+    ],
+    "rule": { "classes": ["1A","1B","1C"], "grades": ["S1"], "clubs": "ALL", "requireOfficer": false },
+    "text": "符合條件學生共 3 人"
+  }
+  ```
+
+  - `students` 最多回 20 人（只含 `Role = Student`）。
+  - `count` 為符合人數總數；0 人時 `students` 為空陣列。
+- **資格語意（前端必須在 UI 明說）**：同一欄內多選＝「符合其中任一項即可」（OR）；不同欄之間＝「必須同時符合」（AND）。例如勾「1A,1B,1C」＋年級「S1」，因 1A/1B/1C 的學生本來就是 S1，結果等於 1A,1B,1C 全部；若勾「1A,1B,1C」＋年級「S2」，交集為空 → `count = 0`，前端必須顯示警告「目前沒有學生符合，這個活動將無人可報名」。
+
+### 8.3 `getDashboardStats` 增量：`attendance`（出席情況的統計口徑）
+
+第 7.7 節的 `totals.attendanceRate` 只計已開始活動，但前端「出席情況」圓餅圖原本用 `totals.confirmed - totals.attended`，把**未開始活動的報名**也算成「未出席」，於是 17 人確認只出席 2 人時顯示「未出席 15 人」。本版新增明確的 `attendance` 物件，前端圓餅圖只能用它。
+
+- `data.totals` 追加：
+
+  ```json
+  "attendance": {
+    "scope": "started",
+    "eventCount": 1,
+    "eventNames": ["中秋節慶祝會"],
+    "confirmed": 5,
+    "attended": 2,
+    "absent": 3,
+    "rate": 40.0
+  }
+  ```
+
+  - 只計 `Status = Active` 且 `EventStart <= now` 的活動，其 `Confirmed` 報名。
+  - `absent = confirmed - attended`；`rate = attended / confirmed * 100`（1 位小數），`confirmed = 0` → `rate = 0`。
+  - `totals.confirmed` / `totals.attended` 維持原語意（全站、含未開始活動），供活動明細表使用；**圓餅圖改用 `attendance`**。
+- 前端圓餅圖標題改「已開始活動的出席情況」，副標顯示納入的活動數（例如「納入 1 場已開始活動：中秋節慶祝會」）。
+
+### 8.4 前端行為（非學生帳號）
+
+- `Role !== 'Student'` 時：活動列表、日曆「即將舉行」、詳情頁的「報名／快速報名／報名候補／取消報名」一律不渲染。
+- 詳情頁報名狀態卡改顯示灰字提示：「教師／管理員帳號不參與學生報名，負責老師可在後台管理名單與點名。」
+- 後端仍會擋（`ROLE_NOT_ALLOWED`），前端只是不要顯示無效操作。
+
+### 8.5 後台 UI 修正
+
+- 新增／修改活動的 Modal 必須可滾動：`modal-dialog` 加 `modal-dialog-scrollable`（或等效 `max-height` + `overflow-y:auto`），確保在 768px 以下高度的視窗仍能按到「儲存」。footer 固定可見。
+- 資格 chips 每組下方說明改為：「同一欄可多選，符合任一項即可；不同欄要同時符合。不勾選＝該欄不限。」
+- chips 變更後（防抖 400ms）呼叫 `previewEligibility`，在表單內顯示：「符合條件的學生：N 人（例：王小明 5A、李小花 5B）」；`N = 0` 時顯示紅色警告。

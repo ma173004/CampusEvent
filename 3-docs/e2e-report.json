@@ -1,5 +1,5 @@
 {
-  "summary": "45/45",
+  "summary": "65/65",
   "results": [
     {
       "name": "login: 表單與版面渲染",
@@ -210,6 +210,104 @@
       "name": "v1.1 手機: events 頁無水平溢出",
       "pass": true,
       "detail": "{\"scrollW\":375,\"innerW\":375,\"cards\":11,\"badges\":6}"
+    },
+    {
+      "name": "v1.2 API: 老師不能報名活動（ROLE_NOT_ALLOWED）",
+      "pass": true,
+      "detail": "只有學生可以報名活動（教師／管理員帳號不需報名）"
+    },
+    {
+      "name": "v1.2 API: 老師不能取消報名（ROLE_NOT_ALLOWED）",
+      "pass": true,
+      "detail": "只有學生可以報名活動（教師／管理員帳號不需報名）"
+    },
+    {
+      "name": "v1.2 API: 學生仍可正常報名",
+      "pass": true,
+      "detail": "Confirmed / "
+    },
+    {
+      "name": "v1.2 API: 學生仍可正常取消報名",
+      "pass": true,
+      "detail": "{\"promoted\":null}"
+    },
+    {
+      "name": "v1.2 API: 資格預覽（不限）5 人",
+      "pass": true,
+      "detail": "[\"S2201\",\"S2202\",\"S2203\",\"S2204\",\"S2205\"]"
+    },
+    {
+      "name": "v1.2 API: 資格預覽（班級 5A）1 人",
+      "pass": true,
+      "detail": "符合條件學生共 1 人"
+    },
+    {
+      "name": "v1.2 API: 資格預覽（1A,1B + S2 交集為空）0 人",
+      "pass": true,
+      "detail": "符合條件學生共 0 人"
+    },
+    {
+      "name": "v1.2 API: 資格預覽拒絕非法值",
+      "pass": true,
+      "detail": "允許班級含無效值：12"
+    },
+    {
+      "name": "v1.2 API: 資格預覽需教師/管理員權限",
+      "pass": true,
+      "detail": "未授權的操作（只限老師或管理員）"
+    },
+    {
+      "name": "v1.2 API: 出席情況只計已開始活動（5/2/3）",
+      "pass": true,
+      "detail": "{\"scope\":\"started\",\"eventCount\":1,\"eventNames\":[\"中秋節慶祝會\"],\"confirmed\":5,\"attended\":2,\"absent\":3,\"rate\":40}"
+    },
+    {
+      "name": "v1.2 UI: 老師活動列表不顯示報名/取消按鈕",
+      "pass": true,
+      "detail": "{\"total\":40,\"regBtns\":0,\"detail\":20}"
+    },
+    {
+      "name": "v1.2 UI: 老師活動列表無 JS 錯誤",
+      "pass": true
+    },
+    {
+      "name": "v1.2 UI: 老師詳情頁顯示「不參與學生報名」且無報名按鈕",
+      "pass": true,
+      "detail": "開放報名 已報 0 / 30 剩餘 30 候補 0 人 報名時段：2026/10/10 08:00 至 2026/10/19 18:00 教師／管理員帳號不參與學生報名，負責老師可在後台管理名單與點名。"
+    },
+    {
+      "name": "v1.2 UI: 老師首頁「即將舉行」不顯示報名按鈕",
+      "pass": true,
+      "detail": "{\"upcoming\":10,\"regBtn\":0}"
+    },
+    {
+      "name": "v1.2 UI: 小視窗(600px)活動 Modal 可滾動、footer 可見、資格預覽 5 人",
+      "pass": true,
+      "detail": "{\"scrollable\":true,\"bodyOverflow\":true,\"modalFits\":true,\"preview\":\"符合條件的學生：5 人（例：王小明 5A、李小花 5B）\"}"
+    },
+    {
+      "name": "v1.2 UI: 資格 1A,1B + S2 交集為空 → 0 人紅色警告",
+      "pass": true,
+      "detail": "目前沒有學生符合，這個活動將無人可報名 請放寬班級／年級／學會條件，或取消「僅限學生幹事報名」。"
+    },
+    {
+      "name": "v1.2 UI: 小視窗下可成功儲存活動",
+      "pass": true,
+      "detail": "20261203a"
+    },
+    {
+      "name": "v1.2: 清理測試活動成功",
+      "pass": true,
+      "detail": "20261203a"
+    },
+    {
+      "name": "v1.2 UI: 出席圓餅圖只計已開始活動（2 出席 / 3 未出席）",
+      "pass": true,
+      "detail": "[2,3] | 已出席 2 人次,未出席 3 人次"
+    },
+    {
+      "name": "v1.2 UI: stats 無 JS 錯誤",
+      "pass": true
     },
     {
       "name": "權限: 未登入訪問 admin 跳轉登入頁",
