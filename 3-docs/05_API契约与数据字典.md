@@ -344,3 +344,61 @@ CDN：
 - **event_detail.html**：`?id=` 取详情；信息表；报名/取消/候补按钮按状态渲染；撞期二次确认；名额与资格提示；返回列表。
 - **admin.html**：`requireLogin(['Teacher','Admin'])`；活动管理（新增/修改/取消，modal 表单 + 前端校验）、报名管理（选活动 → 两表 + 点名）、权限管理（仅 Admin）。
 - **stats.html**：`requireLogin(['Teacher','Admin'])`；4 张统计卡 + 饼图（出席/缺席）+ 柱状图（各班级参与人次）+ 活动明细表。
+
+---
+
+## 7. v1.1 變更（必須參加 / 資格選項化 / 點名時序）
+
+> 本節優先於前文；未提及部分維持不變。修改範圍：`2-backend/01~07*.gs`、`4-local-demo/server.js`、`1-frontend/admin.html`、`assets/js/admin.js`、`assets/js/{event,calendar}.js`、`assets/css/style.css`、`3-docs/*`。
+
+### 7.1 `Events` 新增列（追加在 Q 之後，不影響既有 A–Q 欄位）
+| 列 | 字段 | 说明 |
+|---|---|---|
+| R | IsMandatory | `TRUE` = 必須參加（老師點名、自動報名）；`FALSE` = 自願報名。舊資料缺列一律視為 `FALSE`。 |
+
+### 7.2 資格選項白名單（前後端共用，禁止自由輸入）
+```js
+CLASS_OPTIONS = ['1A','1B','1C','1D','2A','2B','2C','2D','3A','3B','3C','3D',
+                 '4A','4B','4C','4D','5A','5B','5C','5D','6A','6B','6C','6D'];
+GRADE_OPTIONS = ['S1','S2','S3','S4','S5','S6'];
+CLUB_OPTIONS  = ['學生會','美術學會','體育學會','音樂學會','戲劇學會',
+                 '義工團','圖書館學會','科學學會','環保學會','攝影學會'];
+```
+- `EligibleClasses` / `EligibleGrades` / `EligibleClubs` 只接受 `ALL`、空字串（=ALL）或白名單值逗號串。
+- `manageEvent` 校驗：含非法值 → `VALIDATION_ERROR`，message 指出非法值（例：「允許班級含無效值：12」）。
+
+### 7.3 EventView 增量
+`getEvents`、`getEvent`、`getCalendarData`、`getParticipantList` 回傳的活動物件全部追加：
+- `isMandatory: boolean`
+- `started: boolean`（`now >= EventStart`）
+
+### 7.4 `manageEvent` 增量
+- 請求 `event` 物件追加 `isMandatory: boolean`。
+- create/update 保存成功後：若 `isMandatory === true`，為「所有符合資格、且尚無有效報名（非 Cancelled）」的學生自動建立 `Confirmed` 報名（RegTime = 當前時間，Attended = `No`）；成功 data 追加 `"autoEnrolled": <number>`。
+
+### 7.5 `cancelRegistration` 增量
+活動 `IsMandatory = TRUE` → 錯誤碼 `MANDATORY_EVENT`，message「必須參加的活動不可取消報名，請聯絡負責老師」。
+
+### 7.6 `markAttendance` 增量
+校驗順序：權限 → 活動存在且 Active → **`now < EventStart` → `EVENT_NOT_STARTED`（「活動尚未開始，不能點名」）** → 目標 Confirmed 報名存在。
+錯誤碼表追加：`MANDATORY_EVENT`、`EVENT_NOT_STARTED`。
+
+### 7.7 `getDashboardStats` 增量
+- `totals` 追加 `startedEvents`（EventStart ≤ now 的 Active 活動數）、`pendingEvents`（未開始數）。
+- `totals.attendanceRate` 只統計「已開始活動」的 Confirmed：`attended / confirmedInStartedEvents * 100`，1 位小數，分母 0 → `0`。
+- `byEvent[]` 追加 `started: boolean`、`isMandatory: boolean`、`attendanceRate: number|null`（未開始 → `null`）。
+
+### 7.8 種子資料增量
+- `20260925a 中秋節慶祝會`：`IsMandatory = TRUE`；補齊全部 5 位學生自動報名（新增 `20260925a S2203 Confirmed No 2026-09-12 10:00`、`20260925a S2205 Confirmed No 2026-09-12 11:00`）。
+- 新增第 10 個活動 `20261019a 升旗禮（必須參加示範）`：類別 `其他`、地點 `操場`、RegStart `2026-10-15 08:00`、RegEnd `2026-10-18 18:00`、EventStart `2026-10-19 08:00`、EventEnd `2026-10-19 08:30`、Classes/Clubs/Grades 全 `ALL`、RequireOfficer `FALSE`、MaxQuota `0`、HostID `T001`、IsMandatory `TRUE`、CreatedAt `2026-10-01 09:00`。
+- 為 `20261019a` 寫入 5 筆自動報名：`S2201` 09:00、`S2202` 09:01、`S2203` 09:02、`S2204` 09:03、`S2205` 09:04（皆 Confirmed / No，日期 2026-10-16）。
+- 其餘 8 個活動 `IsMandatory = FALSE`；活動總數 10 個。
+- `setupDatabase()` 寫入 Events 時 R 欄填 `TRUE`/`FALSE`；既有表若缺 R 欄標題則自動補上。
+
+### 7.9 共享 CSS 類（Lead 在 `style.css` 提供，直接使用）
+| 類 | 用途 |
+|---|---|
+| `.badge-mandatory` | 紅色「必須參加」徽章（表格、卡片、詳情頁） |
+| `.chip-group` + `.chip-option`（內含 `<input type="checkbox">`） | 後台資格多選（班級/年級/學會） |
+| `.fc-event-mandatory` | 日曆「必須參加」事件配色 |
+| `.text-pending` | 灰字「活動尚未開始」提示 |

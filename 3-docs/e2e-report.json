@@ -1,5 +1,5 @@
 {
-  "summary": "26/26",
+  "summary": "45/45",
   "results": [
     {
       "name": "login: 表單與版面渲染",
@@ -23,12 +23,12 @@
     {
       "name": "dashboard: 統計卡有數值",
       "pass": true,
-      "detail": "我的活動數=4"
+      "detail": "我的活動數=5"
     },
     {
       "name": "dashboard: 月曆事件",
       "pass": true,
-      "detail": "9 個事件, 2 個紅日格"
+      "detail": "10 個事件, 2 個紅日格"
     },
     {
       "name": "dashboard: 無 JS 錯誤",
@@ -37,7 +37,7 @@
     {
       "name": "events: 活動列表渲染",
       "pass": true,
-      "detail": "9 表格列 / 9 卡片; tabs=[\"全部活動\",\"符合資格\",\"已參加\",\"未參加\"]"
+      "detail": "10 表格列 / 10 卡片; tabs=[\"全部活動\",\"符合資格\",\"已參加\",\"未參加\"]"
     },
     {
       "name": "events: 無 JS 錯誤",
@@ -51,7 +51,7 @@
     {
       "name": "detail: 活動詳情渲染",
       "pass": true,
-      "detail": "學術 / 資訊列=10"
+      "detail": "學術 / 資訊列=11"
     },
     {
       "name": "detail: 無 JS 錯誤",
@@ -75,7 +75,7 @@
     {
       "name": "admin(T001): 活動表格",
       "pass": true,
-      "detail": "13 列; tabs=[\"活動管理\",\"報名與點名\",\"權限管理\"]"
+      "detail": "17 列; tabs=[\"活動管理\",\"報名與點名\",\"權限管理\"]"
     },
     {
       "name": "admin(T001): 老師隱藏權限管理 Tab",
@@ -88,17 +88,17 @@
     {
       "name": "admin(T001): 新增活動表單 Modal",
       "pass": true,
-      "detail": "新增活動 欄位=14"
+      "detail": "新增活動 欄位=52"
     },
     {
       "name": "admin(T001): 報名與點名 Tab",
       "pass": true,
-      "detail": "clicked:報名與點名 列=13 出席按鈕=2"
+      "detail": "clicked:報名與點名 列=17 出席按鈕=0"
     },
     {
       "name": "admin(U001): 權限管理 Tab",
       "pass": true,
-      "detail": "21 用戶列, 下拉=8"
+      "detail": "24 用戶列, 下拉=8"
     },
     {
       "name": "admin(U001): 無 JS 錯誤",
@@ -107,16 +107,109 @@
     {
       "name": "stats: 圖表已繪製",
       "pass": true,
-      "detail": "[{\"w\":598,\"h\":351,\"vis\":true},{\"w\":598,\"h\":299,\"vis\":true},{\"w\":1254,\"h\":313,\"vis\":true}] stats=[\"9 活動總數 開放中 9 個\",\"11 總報名人次 其中候補 1 人次\",\"10 已確認人次 已出席 2 人次\",\"20.0% 平均出席率 出席 / 已確認 × 100%\"]"
+      "detail": "[{\"w\":598,\"h\":351,\"vis\":true},{\"w\":598,\"h\":299,\"vis\":true},{\"w\":1254,\"h\":313,\"vis\":true}] stats=[\"10 活動總數 開放中 10 個\",\"18 總報名人次 其中候補 1 人次\",\"17 已確認人次 已出席 2 人次\",\"40.0% 平均出席率（已開始活動） 已開始 1 / 共 10 場\"]"
     },
     {
       "name": "stats: 活動明細表",
       "pass": true,
-      "detail": "9 列"
+      "detail": "10 列"
     },
     {
       "name": "stats: 無 JS 錯誤",
       "pass": true
+    },
+    {
+      "name": "v1.1: 非法資格值被拒（白名單）",
+      "pass": true,
+      "detail": "VALIDATION_ERROR / 允許班級含無效值：12"
+    },
+    {
+      "name": "v1.1: 必須參加活動自動為 5 位學生報名",
+      "pass": true,
+      "detail": "20261210a autoEnrolled=5"
+    },
+    {
+      "name": "v1.1: EventView isMandatory/started/自動報名",
+      "pass": true,
+      "detail": "{\"m\":true,\"s\":false,\"n\":5,\"st\":\"Confirmed\"}"
+    },
+    {
+      "name": "v1.1: 學生不可取消必須參加活動",
+      "pass": true,
+      "detail": "MANDATORY_EVENT / 必須參加的活動不可取消報名，請聯絡負責老師"
+    },
+    {
+      "name": "v1.1: 活動未開始不能點名",
+      "pass": true,
+      "detail": "EVENT_NOT_STARTED / 活動尚未開始，不能點名"
+    },
+    {
+      "name": "v1.1: 統計只計已開始活動",
+      "pass": true,
+      "detail": "started=1 pending=10 未開始列=10 rate=40"
+    },
+    {
+      "name": "v1.1 後台: 資格改為 chips 多選（24/6/10，無自由輸入）",
+      "pass": true,
+      "detail": "[24,6,10] 全選預設=true"
+    },
+    {
+      "name": "v1.1 後台: 編輯時 chips 正確回填（僅美術學會）",
+      "pass": true,
+      "detail": "{\"checkedClubs\":[\"美術學會\"],\"clubsCheckedCount\":1,\"classesCheckedCount\":24,\"mandatory\":false,\"modal\":true}"
+    },
+    {
+      "name": "v1.1 後台: 活動清單顯示「必須參加」徽章",
+      "pass": true,
+      "detail": "3 列 / [\"20260925a\\t\",\"20261019a\\t\",\"20261210a\\t\"]"
+    },
+    {
+      "name": "v1.1 後台: 未開始活動禁止點名",
+      "pass": true,
+      "detail": "提示=活動尚未開始（開始時間 2026/10/20 09:00），暫不可點名。 / 鎖定說明=2"
+    },
+    {
+      "name": "v1.1 後台: 已開始活動可點名",
+      "pass": true,
+      "detail": "按鈕=5 名單列=25 提示=必須參加：此活動已自動為合資格學生報名，請於活動開始後為出席者點名。"
+    },
+    {
+      "name": "v1.1 後台: 無 JS 錯誤",
+      "pass": true
+    },
+    {
+      "name": "v1.1 學生: events 頁必須參加徽章（僅必選活動）",
+      "pass": true,
+      "detail": "3 列 / [\"20260925a\\t\",\"20261019a\\t\",\"20261210a\\t\"]"
+    },
+    {
+      "name": "v1.1 學生: 詳情頁顯示必須參加且不可取消",
+      "pass": true,
+      "detail": "badge=3 enabled取消=0 disabled=0"
+    },
+    {
+      "name": "v1.1: 角色標籤對比度 ≥ 4.5",
+      "pass": true,
+      "detail": "學生 rgb(255, 255, 255) on rgb(20, 83, 140) = 7.94:1"
+    },
+    {
+      "name": "v1.1: 月曆/圖例/即將舉行支援必須參加",
+      "pass": true,
+      "detail": "legend含必須參加=true 清單徽章=1 月曆紅事件=1"
+    },
+    {
+      "name": "v1.1 手機: 日曆改成可橫向滾動（含滑動提示）",
+      "pass": true,
+      "detail": "overflowX=auto scrollable=true minWidth=620px hint=true 頁面寬=375/375"
+    },
+    {
+      "name": "v1.1 手機: 無 JS 錯誤",
+      "pass": true
+    },
+    {
+      "name": "v1.1 手機: events 頁無水平溢出",
+      "pass": true,
+      "detail": "{\"scrollW\":375,\"innerW\":375,\"cards\":11,\"badges\":6}"
     },
     {
       "name": "權限: 未登入訪問 admin 跳轉登入頁",
