@@ -251,10 +251,15 @@ a { text-decoration: none; }
   border: 1px dashed #cbd5e1; border-radius: var(--ces-radius); background: #fbfdff;
 }
 .ces-empty i { font-size: 1.8rem; color: #94a3b8; display: block; margin-bottom: .5rem; }
-.ces-loading {
-  position: relative; min-height: 80px;
+.ces-loading { position: relative; min-height: 0; }
+.ces-loading:empty,
+.ces-loading.is-loading:empty { min-height: 80px; }
+/* 只有「空容器」或「正在載入」時才用置中排版，避免容器內已有內容時被 flex 橫向撐開 */
+.ces-loading:empty,
+.ces-loading.is-loading {
   display: flex; align-items: center; justify-content: center;
 }
+.ces-loading.is-loading { min-height: 80px; }
 .ces-loading.is-loading::after {
   content: ""; width: 26px; height: 26px; border-radius: 50%;
   border: 3px solid rgba(22, 50, 79, .15); border-top-color: var(--ces-navy);
@@ -276,9 +281,11 @@ a { text-decoration: none; }
   display: grid; grid-template-columns: 1.05fr 1fr;
 }
 .ces-login-side {
-  background: linear-gradient(160deg, rgba(22, 50, 79, .92), rgba(215, 38, 61, .55)),
-              url("../img/logo.png") center/60% no-repeat;
-  background-blend-mode: multiply;
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(circle at 88% 8%, rgba(215, 38, 61, .38), rgba(215, 38, 61, 0) 42%),
+    radial-gradient(circle at 6% 96%, rgba(255, 255, 255, .14), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(155deg, #16324f 0%, #1f4a73 58%, #2b5f92 100%);
   color: #fff; padding: 2.4rem;
   display: flex; flex-direction: column; justify-content: space-between;
   min-height: 420px;
@@ -306,7 +313,17 @@ a { text-decoration: none; }
 .detail-hero h1 { font-size: 1.45rem; font-weight: 800; margin: 0; }
 .detail-hero .meta { color: rgba(255, 255, 255, .8); font-size: .88rem; margin-top: .4rem; }
 
-/* ---------- 14. 響應式 ---------- */
+/* ---------- 15. 主頁「即將舉行的活動」列表 ---------- */
+#upcomingList > .py-2 { padding: .7rem 0; }
+#upcomingList > .py-2:first-child { border-top: 0 !important; padding-top: .1rem; }
+#upcomingList .min-w-0 { min-width: 0; }
+#upcomingList a.fw-semibold {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#upcomingList .tag,
+#upcomingList .badge-status { white-space: nowrap; }
+
+/* ---------- 16. 響應式 ---------- */
 @media (max-width: 991.98px) {
   .ces-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ces-grid.cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }

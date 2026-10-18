@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>活動管理 · 校園活動管理系統</title>
+  <link rel="icon" type="image/png" href="assets/img/logo.png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/style.css" rel="stylesheet">
+</head>
+<body data-page="admin" class="bg-body-tertiary">
+  <div id="ces-nav"></div>
+
+  <main class="ces-page container-xxl">
+    <!-- 頁首 -->
+    <section class="ces-hero">
+      <h1><i class="bi bi-sliders me-2"></i>教師 / 管理員後台</h1>
+      <p id="adminRoleHint">老師只能管理自己負責的活動，管理員可管理全部。</p>
+    </section>
+
+    <!-- 分頁 -->
+    <ul class="nav nav-tabs mb-3" id="adminTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tabBtnEvents" data-bs-toggle="tab" data-bs-target="#tab-events"
+          type="button" role="tab" aria-controls="tab-events" aria-selected="true">
+          <i class="bi bi-calendar-event"></i> 活動管理
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tabBtnParticipants" data-bs-toggle="tab" data-bs-target="#tab-participants"
+          type="button" role="tab" aria-controls="tab-participants" aria-selected="false">
+          <i class="bi bi-people"></i> 報名與點名
+        </button>
+      </li>
+      <li class="nav-item" role="presentation" id="tabNavUsers">
+        <button class="nav-link" id="tabBtnUsers" data-bs-toggle="tab" data-bs-target="#tab-users"
+          type="button" role="tab" aria-controls="tab-users" aria-selected="false">
+          <i class="bi bi-person-gear"></i> 權限管理
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="adminTabsContent">
+      <!-- ===== Tab 1：活動管理 ===== -->
+      <div class="tab-pane fade show active" id="tab-events" role="tabpanel" aria-labelledby="tabBtnEvents">
+        <div class="ces-card">
+          <div class="ces-card-title">
+            <span><i class="bi bi-list-task me-1"></i>活動清單</span>
+            <button type="button" class="btn btn-ces-primary btn-sm" id="btnCreateEvent">
+              <i class="bi bi-plus-lg"></i> 新增活動
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-ces align-middle">
+              <thead>
+                <tr>
+                  <th scope="col">活動編號</th>
+                  <th scope="col">名稱</th>
+                  <th scope="col">類別</th>
+                  <th scope="col">活動時間</th>
+                  <th scope="col">報名時間</th>
+                  <th scope="col">名額（已報/上限）</th>
+                  <th scope="col">狀態</th>
+                  <th scope="col">操作</th>
+                </tr>
+              </thead>
+              <tbody id="eventTableBody">
+                <tr><td colspan="8" class="text-center text-muted py-4">載入中…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Tab 2：報名與點名 ===== -->
+      <div class="tab-pane fade" id="tab-participants" role="tabpanel" aria-labelledby="tabBtnParticipants">
+        <div class="ces-card">
+          <div class="ces-card-title">
+            <span><i class="bi bi-people me-1"></i>報名名單與點名</span>
+          </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <label class="form-label mb-0 small fw-semibold" for="participantSelect">選擇活動</label>
+            <select class="form-select form-select-sm" id="participantSelect" style="max-width: 26rem;">
+              <option value="">（載入中…）</option>
+            </select>
+            <span class="muted small" id="participantHint"></span>
+          </div>
+          <div id="participantQuota" class="mb-1"></div>
+        </div>
+
+        <div class="ces-card">
+          <div class="ces-card-title">
+            <span><i class="bi bi-check2-circle me-1"></i>確認名單</span>
+            <span class="muted small">標記出席後仍可取消</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-ces align-middle">
+              <thead>
+                <tr>
+                  <th scope="col">學號</th>
+                  <th scope="col">姓名</th>
+                  <th scope="col">班級</th>
+                  <th scope="col">年級</th>
+                  <th scope="col">報名時間</th>
+                  <th scope="col">出席</th>
+                  <th scope="col">操作</th>
+                </tr>
+              </thead>
+              <tbody id="confirmedTableBody">
+                <tr><td colspan="7" class="text-center text-muted py-4">請先選擇活動</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="ces-card">
+          <div class="ces-card-title">
+            <span><i class="bi bi-hourglass-split me-1"></i>候補名單</span>
+            <span class="muted small">依報名時間先後排序</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-ces align-middle">
+              <thead>
+                <tr>
+                  <th scope="col">學號</th>
+                  <th scope="col">姓名</th>
+                  <th scope="col">班級</th>
+                  <th scope="col">年級</th>
+                  <th scope="col">報名時間</th>
+                </tr>
+              </thead>
+              <tbody id="waitlistTableBody">
+                <tr><td colspan="5" class="text-center text-muted py-4">請先選擇活動</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Tab 3：權限管理（僅 Admin） ===== -->
+      <div class="tab-pane fade" id="tab-users" role="tabpanel" aria-labelledby="tabBtnUsers">
+        <div class="ces-card">
+          <div class="ces-card-title">
+            <span><i class="bi bi-person-gear me-1"></i>使用者角色管理</span>
+            <span class="muted small">變更角色前會再次確認，且不能修改自己</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-ces align-middle">
+              <thead>
+                <tr>
+                  <th scope="col">使用者編號</th>
+                  <th scope="col">姓名</th>
+                  <th scope="col">角色</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">班級</th>
+                  <th scope="col">年級</th>
+                  <th scope="col">學會</th>
+                </tr>
+              </thead>
+              <tbody id="userTableBody">
+                <tr><td colspan="7" class="text-center text-muted py-4">載入中…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== 活動新增 / 修改 Modal ===== -->
+  <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="eventModalTitle">新增活動</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+        </div>
+        <form id="eventForm" novalidate>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-8">
+                <label class="form-label" for="evName">活動名稱 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="evName" maxlength="100" placeholder="例如：旅行日介紹工作坊">
+                <div class="invalid-feedback">請填寫活動名稱</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="evCategory">類別</label>
+                <select class="form-select" id="evCategory">
+                  <option value="學術">學術</option>
+                  <option value="藝術">藝術</option>
+                  <option value="體育">體育</option>
+                  <option value="服務">服務</option>
+                  <option value="講座">講座</option>
+                  <option value="其他">其他</option>
+                </select>
+              </div>
+
+              <div class="col-md-8">
+                <label class="form-label" for="evLocation">地點 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="evLocation" maxlength="100" placeholder="例如：禮堂">
+                <div class="invalid-feedback">請填寫活動地點</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="evMaxQuota">名額上限 <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="evMaxQuota" min="0" step="1" value="0">
+                <div class="form-text">0 表示不限名額</div>
+                <div class="invalid-feedback">名額需為大於或等於 0 的整數</div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="evRegStart">報名開始 <span class="text-danger">*</span></label>
+                <input type="datetime-local" class="form-control" id="evRegStart">
+                <div class="invalid-feedback">請選擇報名開始時間</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="evRegEnd">報名截止 <span class="text-danger">*</span></label>
+                <input type="datetime-local" class="form-control" id="evRegEnd">
+                <div class="invalid-feedback">報名截止必須晚於報名開始</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="evEventStart">活動開始 <span class="text-danger">*</span></label>
+                <input type="datetime-local" class="form-control" id="evEventStart">
+                <div class="invalid-feedback">活動開始必須晚於報名截止</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="evEventEnd">活動結束 <span class="text-danger">*</span></label>
+                <input type="datetime-local" class="form-control" id="evEventEnd">
+                <div class="invalid-feedback">活動結束必須晚於活動開始</div>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label" for="evClasses">允許班級</label>
+                <input type="text" class="form-control" id="evClasses" value="ALL" placeholder="ALL 或 5A,5B">
+                <div class="invalid-feedback">格式錯誤</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="evGrades">允許年級</label>
+                <input type="text" class="form-control" id="evGrades" value="ALL" placeholder="ALL 或 S5,S6">
+                <div class="invalid-feedback">格式錯誤</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="evClubs">允許學會</label>
+                <input type="text" class="form-control" id="evClubs" value="ALL" placeholder="ALL 或 美術學會,義工團">
+                <div class="invalid-feedback">格式錯誤</div>
+              </div>
+
+              <div class="col-12 d-none" id="hostFieldWrap">
+                <label class="form-label" for="evHost">負責老師</label>
+                <select class="form-select" id="evHost"></select>
+                <div class="form-text">管理員可指定負責老師，預設為自己。</div>
+              </div>
+
+              <div class="col-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="evRequireOfficer">
+                  <label class="form-check-label" for="evRequireOfficer">僅限學生幹事報名</label>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label" for="evDescription">簡介</label>
+                <textarea class="form-control" id="evDescription" rows="3" maxlength="500"
+                  placeholder="活動內容簡介（選填）"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ces-ghost" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-ces-primary" id="eventSubmitBtn">
+              <i class="bi bi-check2"></i> 儲存
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>

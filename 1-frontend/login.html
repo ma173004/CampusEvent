@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>登入 · 校園活動管理系統</title>
+  <link rel="icon" type="image/png" href="assets/img/logo.png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/style.css" rel="stylesheet">
+</head>
+<body data-page="login" class="ces-login-body">
+  <main class="ces-login-card">
+    <!-- 左側品牌區 -->
+    <section class="ces-login-side">
+      <div class="d-flex align-items-center gap-2">
+        <img src="assets/img/logo.png" alt="校園活動管理系統標誌" class="ces-logo">
+        <span class="fw-bold">校園活動管理系統</span>
+      </div>
+      <div>
+        <h2 class="mb-2">一站式校園活動報名平台</h2>
+        <p class="lead-sm mb-0">瀏覽活動、即時報名、候補遞補、出席紀錄，全部在同一個地方完成。</p>
+        <ul>
+          <li><i class="bi bi-calendar3 me-2"></i>月曆檢視活動與公眾假期</li>
+          <li><i class="bi bi-funnel me-2"></i>按資格篩選、快速報名</li>
+          <li><i class="bi bi-people me-2"></i>名額與候補自動遞補</li>
+          <li><i class="bi bi-bar-chart-line me-2"></i>教師專用數據報表</li>
+        </ul>
+      </div>
+      <p class="lead-sm mb-0">© 2026 校園活動管理系統 · ICT SBA 專題研習</p>
+    </section>
+
+    <!-- 右側登入表單 -->
+    <section class="ces-login-form">
+      <h3 class="mb-1">會員登入</h3>
+      <p class="muted small mb-4">請使用學號或工號登入系統</p>
+
+      <form id="loginForm" novalidate>
+        <div class="mb-3">
+          <label for="userID" class="form-label fw-semibold">學號 / 工號</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-person"></i></span>
+            <input type="text" class="form-control" id="userID" name="userID"
+                   placeholder="例如：S2201" autocomplete="username" required>
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <label for="password" class="form-label fw-semibold">密碼</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input type="password" class="form-control" id="password" name="password"
+                   placeholder="請輸入密碼" autocomplete="current-password" required>
+            <button class="btn btn-outline-secondary" type="button" id="togglePwd" aria-label="顯示或隱藏密碼">
+              <i class="bi bi-eye" id="togglePwdIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="showPwd">
+          <label class="form-check-label small" for="showPwd">顯示密碼</label>
+        </div>
+
+        <div id="loginError" class="alert alert-danger py-2 small d-none" role="alert"></div>
+
+        <button type="submit" class="btn btn-ces-primary w-100" id="loginBtn">登入</button>
+      </form>
+
+      <div class="ces-login-hint">
+        <div class="fw-semibold mb-1"><i class="bi bi-info-circle me-1"></i>測試帳號</div>
+        管理員：<code>U001</code> / <code>admin123</code><br>
+        老師：<code>T001</code> / <code>teacher123</code><br>
+        學生：<code>S2201</code> / <code>student123</code>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      var form = document.getElementById('loginForm');
+      var userInput = document.getElementById('userID');
+      var pwdInput = document.getElementById('password');
+      var showPwd = document.getElementById('showPwd');
+      var togglePwd = document.getElementById('togglePwd');
+      var togglePwdIcon = document.getElementById('togglePwdIcon');
+      var errorBox = document.getElementById('loginError');
+      var loginBtn = document.getElementById('loginBtn');
+
+      /* 登入成功後要前往的頁面：只允許同站的 xxx.html（可帶 query），避免 open redirect */
+      function nextTarget() {
+        var next = CES_UI.qs('next');
+        if (next) {
+          var ok = /^[A-Za-z0-9_.\-]+\.html(\?[A-Za-z0-9_.=%\-&]*)?$/.test(next) &&
+                   next.indexOf('login.html') !== 0;
+          if (ok) return next;
+        }
+        return 'dashboard.html';
+      }
+
+      /* 已登入者直接進首頁（或 next） */
+      if (CES_AUTH.getUser()) {
+        location.replace(nextTarget());
+        return;
+      }
+
+      function showError(msg) {
+        errorBox.textContent = msg;
+        errorBox.classList.remove('d-none');
+      }
+      function clearError() {
+        errorBox.textContent = '';
+        errorBox.classList.add('d-none');
+      }
+
+      function setBusy(on) {
+        loginBtn.disabled = on;
+        userInput.disabled = on;
+        pwdInput.disabled = on;
+        if (on) {
+          loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>登入中…';
+        } else {
+          loginBtn.textContent = '登入';
+        }
+      }
+
+      function bindShowPwd(value) {
+        pwdInput.type = value ? 'text' : 'password';
+        showPwd.checked = value;
+        togglePwd.setAttribute('aria-label', value ? '隱藏密碼' : '顯示密碼');
+        if (togglePwdIcon) togglePwdIcon.className = value ? 'bi bi-eye-slash' : 'bi bi-eye';
+      }
+
+      showPwd.addEventListener('change', function () { bindShowPwd(showPwd.checked); });
+      togglePwd.addEventListener('click', function () { bindShowPwd(pwdInput.type === 'password'); });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        clearError();
+
+        var userID = userInput.value.trim();
+        var password = pwdInput.value;
+        if (!userID) { showError('請輸入學號或工號'); userInput.focus(); return; }
+        if (!password) { showError('請輸入密碼'); pwdInput.focus(); return; }
+
+        setBusy(true);
+        CES_AUTH.login(userID, password).then(function () {
+          // 教師 / 管理員同樣以首頁為入口，管理功能由導航列進入
+          location.replace(nextTarget());
+        }).catch(function (err) {
+          setBusy(false);
+          var code = err && err.code;
+          if (code === 'AUTH_FAILED') {
+            showError((err && err.message) || '帳號或密碼錯誤');
+          } else if (code === 'NETWORK_ERROR' || code === 'TIMEOUT' ||
+                     code === 'BAD_RESPONSE' || String(code || '').indexOf('HTTP_') === 0) {
+            showError('無法連接後端，請先啟動本地 mock server 或部署 GAS');
+          } else {
+            showError((err && err.message) || '登入失敗，請稍後再試');
+          }
+          pwdInput.focus();
+          pwdInput.select();
+        });
+      });
+
+      userInput.focus();
+    })();
+  </script>
+</body>
+</html>
