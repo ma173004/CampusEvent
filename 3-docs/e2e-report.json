@@ -1,0 +1,127 @@
+{
+  "summary": "26/26",
+  "results": [
+    {
+      "name": "login: 表單與版面渲染",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "login: 無 JS 錯誤",
+      "pass": true
+    },
+    {
+      "name": "login: 錯誤提示",
+      "pass": true,
+      "detail": "帳號或密碼錯誤"
+    },
+    {
+      "name": "dashboard: 導航與歡迎語",
+      "pass": true,
+      "detail": "你好，王小明 學生"
+    },
+    {
+      "name": "dashboard: 統計卡有數值",
+      "pass": true,
+      "detail": "我的活動數=4"
+    },
+    {
+      "name": "dashboard: 月曆事件",
+      "pass": true,
+      "detail": "9 個事件, 2 個紅日格"
+    },
+    {
+      "name": "dashboard: 無 JS 錯誤",
+      "pass": true
+    },
+    {
+      "name": "events: 活動列表渲染",
+      "pass": true,
+      "detail": "9 表格列 / 9 卡片; tabs=[\"全部活動\",\"符合資格\",\"已參加\",\"未參加\"]"
+    },
+    {
+      "name": "events: 無 JS 錯誤",
+      "pass": true
+    },
+    {
+      "name": "events: 搜尋「圖書」過濾",
+      "pass": true,
+      "detail": "1 列"
+    },
+    {
+      "name": "detail: 活動詳情渲染",
+      "pass": true,
+      "detail": "學術 / 資訊列=10"
+    },
+    {
+      "name": "detail: 無 JS 錯誤",
+      "pass": true
+    },
+    {
+      "name": "detail: 撞期二次確認彈窗",
+      "pass": true,
+      "detail": "clicked:立即報名 → 系統檢測到你當天已有以下活動，仍要報名嗎？  旅行日介紹工作坊（2026/10/20 09:00 至 12:00）"
+    },
+    {
+      "name": "detail: 撞期確認後報名成功",
+      "pass": true,
+      "detail": "報名成功 / 狀態=[\"已確認\",\"已報名\"]"
+    },
+    {
+      "name": "detail: 已報名狀態與取消按鈕",
+      "pass": true,
+      "detail": " | 登出 | 已報名（取消報名）"
+    },
+    {
+      "name": "admin(T001): 活動表格",
+      "pass": true,
+      "detail": "13 列; tabs=[\"活動管理\",\"報名與點名\",\"權限管理\"]"
+    },
+    {
+      "name": "admin(T001): 老師隱藏權限管理 Tab",
+      "pass": true
+    },
+    {
+      "name": "admin(T001): 無 JS 錯誤",
+      "pass": true
+    },
+    {
+      "name": "admin(T001): 新增活動表單 Modal",
+      "pass": true,
+      "detail": "新增活動 欄位=14"
+    },
+    {
+      "name": "admin(T001): 報名與點名 Tab",
+      "pass": true,
+      "detail": "clicked:報名與點名 列=13 出席按鈕=2"
+    },
+    {
+      "name": "admin(U001): 權限管理 Tab",
+      "pass": true,
+      "detail": "21 用戶列, 下拉=8"
+    },
+    {
+      "name": "admin(U001): 無 JS 錯誤",
+      "pass": true
+    },
+    {
+      "name": "stats: 圖表已繪製",
+      "pass": true,
+      "detail": "[{\"w\":598,\"h\":351,\"vis\":true},{\"w\":598,\"h\":299,\"vis\":true},{\"w\":1254,\"h\":313,\"vis\":true}] stats=[\"9 活動總數 開放中 9 個\",\"11 總報名人次 其中候補 1 人次\",\"10 已確認人次 已出席 2 人次\",\"20.0% 平均出席率 出席 / 已確認 × 100%\"]"
+    },
+    {
+      "name": "stats: 活動明細表",
+      "pass": true,
+      "detail": "9 列"
+    },
+    {
+      "name": "stats: 無 JS 錯誤",
+      "pass": true
+    },
+    {
+      "name": "權限: 未登入訪問 admin 跳轉登入頁",
+      "pass": true,
+      "detail": "/login.html?next=admin.html"
+    }
+  ]
+}
