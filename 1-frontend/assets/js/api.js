@@ -11,7 +11,7 @@
   // 本地 Node mock server（4-local-demo/server.js）的 API 根路径
   var LOCAL_API = 'http://127.0.0.1:8787/api';
   // GAS 部署后，把下面这行替换成你的 Web App /exec 链接
-  var GAS_API = 'https://script.googleusercontent.com/a/macros/lcms.edu.hk/echo?user_content_key=AUkAhnTIuwEyDqGXwuG4o1sQdmB2eAjBQc9zrA2NcVlwjPtN08hOLsqiY3wwJ9pRPa8yqLS9ahPrDVIQ7KtIqDzUVGXijeXVV-4LTvOxLA2-tER-2Chg-AyLYOBTXj_jMUEQTYzDh6MBqr5qUphCi6za59Qxelizog5OmeVCtA9pOYCNC067UGynmZZ6xDBWE-4O0VYhOOXpTZmWkoTTt5xcFMDdFIOfLh6wd4mIpsrmfWvi38uQEvgGXDjvTzhr_yCdbMYChXUGMk7tVZQMcCJURBa7vklelTZ5z-H8n1a2kLU9GOj_SbjT6-L0j5FkjQ&lib=MPt9q1pgAab8fBceBTy2qF-XQ1G8wOI53/exec';
+  var GAS_API = 'https://script.googleusercontent.com/a/macros/lcms.edu.hk/echo?user_content_key=AUkAhnRUGEcz7XMh1k0CN2UahXSsygB95hduFPrOkA1Dnx2Y4E9B1d2CMbJuGeY3i0K5Yn7XMteSZCBvQNvC93mNaSu8SeRoWf_QJ3fv8wSO5IAyYyhMQoFlzuM8kr90mmaA5afYcEXBUNDFH-7jmrK253itPGtjSrLvRqGGPmTvH0EbEo3ef7BhEtnFpdSc2P8vbgbjWqSPf1dk0ct_jUC_HU74DuWH_fJhssfC4OUiTByghPZ9b9zT5bGj6KEnK09zFp6Z_ImHKgsEQhzVsRVlfGXP05b_fqj1c-dXfl4bytvi4-NrO-15DFtMXjpVOw&lib=MPt9q1pgAab8fBceBTy2qF-XQ1G8wOI53';
 
   function resolveBase() {
     // 允许在浏览器控制台临时切换：localStorage.setItem('ces_api_base', '...')
