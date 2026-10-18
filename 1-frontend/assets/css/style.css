@@ -1,0 +1,323 @@
+/* =============================================================
+ * 校園活動管理系統 · 全局樣式
+ * 依賴：Bootstrap 5.3（CDN，已在本文件前載入）
+ * 約定：頁面只使用本文件提供的 ces-* / role-* / badge-status 類，
+ *       微調用 Bootstrap utilities，不新增 <style> 區塊。
+ * ============================================================= */
+
+/* ---------- 1. Design tokens ---------- */
+:root {
+  --ces-navy: #16324f;
+  --ces-navy-2: #1f4a73;
+  --ces-red: #d7263d;
+  --ces-red-2: #b31e31;
+  --ces-green: #1b8a5a;
+  --ces-amber: #d99a1b;
+  --ces-blue: #2b6cb0;
+  --ces-bg: #f3f6fa;
+  --ces-card: #ffffff;
+  --ces-line: #e2e8f0;
+  --ces-text: #1f2937;
+  --ces-muted: #6b7280;
+  --ces-radius: 14px;
+  --ces-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .06);
+  --ces-shadow-lg: 0 10px 40px rgba(16, 24, 40, .12);
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--ces-bg);
+  color: var(--ces-text);
+  font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { text-decoration: none; }
+
+/* ---------- 2. 導航欄 ---------- */
+.ces-navbar {
+  background: linear-gradient(90deg, var(--ces-navy) 0%, var(--ces-navy-2) 100%);
+  box-shadow: 0 2px 10px rgba(16, 24, 40, .12);
+  padding-top: .55rem;
+  padding-bottom: .55rem;
+}
+.ces-navbar .navbar-brand { color: #fff; font-weight: 700; letter-spacing: .3px; }
+.ces-navbar .navbar-brand:hover { color: #fff; }
+.ces-navbar .nav-link {
+  color: rgba(255, 255, 255, .8) !important;
+  border-radius: 8px;
+  padding: .45rem .85rem !important;
+  font-weight: 500;
+  transition: background .15s ease, color .15s ease;
+}
+.ces-navbar .nav-link:hover { color: #fff !important; background: rgba(255, 255, 255, .1); }
+.ces-navbar .nav-link.active {
+  color: #fff !important;
+  background: rgba(255, 255, 255, .18);
+  box-shadow: inset 0 -2px 0 var(--ces-red);
+}
+.ces-navbar .navbar-toggler { border-color: rgba(255, 255, 255, .4); }
+.ces-navbar .navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255,255,255,0.85%29' stroke-width='2' stroke-linecap='round' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+.ces-logo {
+  width: 30px; height: 30px; border-radius: 8px; object-fit: cover;
+  background: #fff; padding: 2px;
+}
+.ces-user-chip {
+  color: #fff;
+  font-size: .9rem;
+  background: rgba(255, 255, 255, .08);
+  border-radius: 999px;
+  padding: .25rem .35rem .25rem .6rem;
+}
+.ces-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--ces-red); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: .8rem; font-weight: 700;
+}
+.ces-username { max-width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ces-user-chip .btn { --bs-btn-color: #fff; --bs-btn-border-color: rgba(255,255,255,.45); }
+.ces-user-chip .btn:hover { background: rgba(255, 255, 255, .16); color: #fff; }
+
+/* ---------- 3. 頁面骨架 ---------- */
+.ces-page {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+}
+.ces-hero {
+  background: linear-gradient(100deg, rgba(22, 50, 79, .95), rgba(43, 108, 176, .85)),
+              radial-gradient(circle at 85% 20%, rgba(215, 38, 61, .5), transparent 45%);
+  color: #fff;
+  border-radius: var(--ces-radius);
+  padding: 1.6rem 1.8rem;
+  box-shadow: var(--ces-shadow);
+  margin-bottom: 1.25rem;
+}
+.ces-hero h1, .ces-hero h2 { font-size: 1.5rem; font-weight: 700; margin: 0; }
+.ces-hero p { margin: .35rem 0 0; color: rgba(255, 255, 255, .82); }
+.ces-hero .ces-hero-meta { font-size: .875rem; color: rgba(255, 255, 255, .75); }
+
+.section-title {
+  font-size: 1.05rem; font-weight: 700; color: var(--ces-navy);
+  display: flex; align-items: center; gap: .5rem; margin: 0 0 .9rem;
+}
+.section-title::before {
+  content: ""; width: 4px; height: 1.05rem; border-radius: 4px;
+  background: var(--ces-red); display: inline-block;
+}
+.muted { color: var(--ces-muted); }
+
+/* ---------- 4. 卡片/容器 ---------- */
+.ces-card {
+  background: var(--ces-card);
+  border: 1px solid var(--ces-line);
+  border-radius: var(--ces-radius);
+  box-shadow: var(--ces-shadow);
+  padding: 1.15rem 1.25rem;
+}
+.ces-card + .ces-card { margin-top: 1rem; }
+.ces-card-title {
+  font-size: 1rem; font-weight: 700; color: var(--ces-navy);
+  margin: 0 0 .85rem; display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+}
+.ces-grid { display: grid; gap: 1rem; }
+.ces-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ces-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ces-toolbar {
+  display: flex; flex-wrap: wrap; gap: .6rem; align-items: center;
+  margin-bottom: 1rem;
+}
+.filter-bar {
+  display: flex; flex-wrap: wrap; gap: .6rem; align-items: center;
+  background: var(--ces-card); border: 1px solid var(--ces-line);
+  border-radius: var(--ces-radius); padding: .75rem 1rem; margin-bottom: 1rem;
+}
+
+/* ---------- 5. 統計卡 ---------- */
+.ces-stat-grid {
+  display: grid; gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 1.25rem;
+}
+.ces-stat {
+  background: var(--ces-card); border: 1px solid var(--ces-line);
+  border-radius: var(--ces-radius); padding: 1rem 1.15rem;
+  box-shadow: var(--ces-shadow);
+  border-left: 4px solid var(--ces-blue);
+}
+.ces-stat.stat-red { border-left-color: var(--ces-red); }
+.ces-stat.stat-green { border-left-color: var(--ces-green); }
+.ces-stat.stat-amber { border-left-color: var(--ces-amber); }
+.ces-stat-value { font-size: 1.85rem; font-weight: 800; line-height: 1.1; color: var(--ces-navy); }
+.ces-stat-label { font-size: .82rem; color: var(--ces-muted); margin-top: .2rem; }
+
+/* ---------- 6. 活動卡片 ---------- */
+.ces-event-card { display: flex; flex-direction: column; height: 100%; }
+.ces-event-card .card-cover {
+  height: 6px; border-radius: 999px; margin: -1.15rem -1.25rem .9rem;
+  background: linear-gradient(90deg, var(--ces-navy), var(--ces-blue));
+}
+.ces-event-card h3 { font-size: 1.02rem; font-weight: 700; margin: 0 0 .4rem; color: var(--ces-text); }
+.ces-event-card .meta { font-size: .82rem; color: var(--ces-muted); line-height: 1.7; }
+.ces-event-card .meta i { color: var(--ces-navy-2); width: 1.05rem; display: inline-block; }
+.ces-event-card .actions { margin-top: auto; display: flex; gap: .5rem; padding-top: .9rem; flex-wrap: wrap; }
+.ces-quota { font-size: .78rem; color: var(--ces-muted); }
+.ces-quota .progress { height: 6px; border-radius: 999px; background: #eef2f7; }
+
+/* ---------- 7. 標籤/徽章 ---------- */
+.tag {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: .74rem; font-weight: 600; padding: .16rem .55rem;
+  border-radius: 999px; background: rgba(43, 108, 176, .1); color: var(--ces-blue);
+}
+.tag-soft { background: rgba(107, 114, 128, .12); color: #4b5563; }
+.badge-status {
+  display: inline-block; font-size: .74rem; font-weight: 600;
+  padding: .18rem .6rem; border-radius: 999px; white-space: nowrap;
+}
+.badge-status.is-confirmed { background: rgba(27, 138, 90, .12); color: var(--ces-green); }
+.badge-status.is-waitlist { background: rgba(217, 154, 27, .16); color: #9a6a0a; }
+.badge-status.is-cancelled { background: rgba(215, 38, 61, .12); color: var(--ces-red); }
+.badge-status.is-none { background: rgba(107, 114, 128, .12); color: #4b5563; }
+
+.role-badge {
+  display: inline-flex; align-items: center; font-size: .72rem; font-weight: 700;
+  padding: .15rem .55rem; border-radius: 999px; letter-spacing: .04em;
+}
+.role-badge.role-student { background: rgba(43, 108, 176, .12); color: #1d4e89; }
+.role-badge.role-teacher { background: rgba(27, 138, 90, .12); color: #146c46; }
+.role-badge.role-admin { background: rgba(215, 38, 61, .12); color: var(--ces-red); }
+
+/* ---------- 8. 表格 ---------- */
+.table-ces {
+  --bs-table-bg: transparent;
+  margin-bottom: 0;
+  font-size: .88rem;
+  vertical-align: middle;
+}
+.table-ces thead th {
+  background: #f1f5f9; color: var(--ces-navy);
+  font-weight: 700; font-size: .8rem; white-space: nowrap;
+  border-bottom: 1px solid var(--ces-line);
+}
+.table-ces tbody tr:hover { background: #f8fafc; }
+.table-ces td { color: #374151; }
+
+/* ---------- 9. 按鈕 ---------- */
+.btn-ces-primary {
+  --bs-btn-bg: var(--ces-red); --bs-btn-border-color: var(--ces-red);
+  --bs-btn-hover-bg: var(--ces-red-2); --bs-btn-hover-border-color: var(--ces-red-2);
+  --bs-btn-color: #fff; --bs-btn-hover-color: #fff;
+  font-weight: 600; border-radius: 10px;
+}
+.btn-ces-ghost {
+  --bs-btn-color: var(--ces-navy); --bs-btn-border-color: #cbd5e1;
+  --bs-btn-hover-bg: #eef2f7; --bs-btn-hover-border-color: #94a3b8;
+  --bs-btn-hover-color: var(--ces-navy);
+  font-weight: 600; border-radius: 10px;
+}
+
+/* ---------- 10. 日曆 ---------- */
+.calendar-wrap { background: var(--ces-card); border: 1px solid var(--ces-line); border-radius: var(--ces-radius); padding: 1rem; box-shadow: var(--ces-shadow); }
+.calendar-legend { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: .8rem; font-size: .82rem; color: var(--ces-muted); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: .35rem; }
+.legend-dot.is-holiday { background: var(--ces-red); }
+.legend-dot.is-host { background: var(--ces-blue); }
+.legend-dot.is-joined { background: var(--ces-green); }
+
+.fc { font-size: .9rem; }
+.fc .fc-toolbar-title { font-size: 1.1rem; font-weight: 700; color: var(--ces-navy); }
+.fc .fc-button {
+  background: var(--ces-navy); border-color: var(--ces-navy);
+  font-size: .82rem; font-weight: 600; border-radius: 8px;
+}
+.fc .fc-button:hover, .fc .fc-button:focus { background: var(--ces-navy-2); border-color: var(--ces-navy-2); }
+.fc .fc-button-primary:not(:disabled).fc-button-active { background: var(--ces-red); border-color: var(--ces-red); }
+.fc-theme-standard td, .fc-theme-standard th { border-color: var(--ces-line); }
+.fc-day-holiday { background: rgba(215, 38, 61, .07) !important; }
+.fc-day-holiday .fc-daygrid-day-number { color: var(--ces-red); font-weight: 700; }
+.fc-event { border: none; border-radius: 6px; padding: 1px 4px; font-size: .78rem; cursor: pointer; }
+.fc-event-host { background: var(--ces-blue) !important; color: #fff !important; }
+.fc-event-joined { background: var(--ces-green) !important; color: #fff !important; }
+.fc-event-other { background: #94a3b8 !important; color: #fff !important; }
+.fc-event-holiday { background: var(--ces-red) !important; color: #fff !important; }
+
+/* ---------- 11. 空狀態 / 載入 ---------- */
+.ces-empty {
+  text-align: center; padding: 2.5rem 1rem; color: var(--ces-muted);
+  border: 1px dashed #cbd5e1; border-radius: var(--ces-radius); background: #fbfdff;
+}
+.ces-empty i { font-size: 1.8rem; color: #94a3b8; display: block; margin-bottom: .5rem; }
+.ces-loading {
+  position: relative; min-height: 80px;
+  display: flex; align-items: center; justify-content: center;
+}
+.ces-loading.is-loading::after {
+  content: ""; width: 26px; height: 26px; border-radius: 50%;
+  border: 3px solid rgba(22, 50, 79, .15); border-top-color: var(--ces-navy);
+  animation: ces-spin .8s linear infinite;
+}
+@keyframes ces-spin { to { transform: rotate(360deg); } }
+
+/* ---------- 12. 登入頁 ---------- */
+.ces-login-body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #16324f 0%, #1f4a73 55%, #245b8f 100%);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem;
+}
+.ces-login-card {
+  width: 100%; max-width: 940px;
+  background: #fff; border-radius: 18px; overflow: hidden;
+  box-shadow: var(--ces-shadow-lg);
+  display: grid; grid-template-columns: 1.05fr 1fr;
+}
+.ces-login-side {
+  background: linear-gradient(160deg, rgba(22, 50, 79, .92), rgba(215, 38, 61, .55)),
+              url("../img/logo.png") center/60% no-repeat;
+  background-blend-mode: multiply;
+  color: #fff; padding: 2.4rem;
+  display: flex; flex-direction: column; justify-content: space-between;
+  min-height: 420px;
+}
+.ces-login-side h2 { font-size: 1.5rem; font-weight: 800; }
+.ces-login-side .lead-sm { color: rgba(255, 255, 255, .82); font-size: .92rem; }
+.ces-login-side ul { list-style: none; padding: 0; margin: 1.2rem 0 0; font-size: .88rem; }
+.ces-login-side li { margin-bottom: .5rem; color: rgba(255, 255, 255, .9); }
+.ces-login-form { padding: 2.2rem 2.4rem; }
+.ces-login-form h3 { font-weight: 800; color: var(--ces-navy); font-size: 1.25rem; }
+.ces-login-hint {
+  margin-top: 1.1rem; padding: .8rem .95rem; border-radius: 10px;
+  background: #f1f5f9; font-size: .8rem; color: #475569; line-height: 1.7;
+}
+.ces-login-hint code { color: var(--ces-red); background: transparent; }
+
+/* ---------- 13. 詳情頁 ---------- */
+.detail-list { margin: 0; }
+.detail-list dt { font-size: .8rem; color: var(--ces-muted); font-weight: 600; margin-top: .7rem; }
+.detail-list dd { margin: .15rem 0 0; font-size: .95rem; color: var(--ces-text); }
+.detail-hero {
+  background: linear-gradient(100deg, rgba(22, 50, 79, .96), rgba(31, 74, 115, .9));
+  color: #fff; border-radius: var(--ces-radius); padding: 1.5rem 1.6rem; box-shadow: var(--ces-shadow);
+}
+.detail-hero h1 { font-size: 1.45rem; font-weight: 800; margin: 0; }
+.detail-hero .meta { color: rgba(255, 255, 255, .8); font-size: .88rem; margin-top: .4rem; }
+
+/* ---------- 14. 響應式 ---------- */
+@media (max-width: 991.98px) {
+  .ces-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ces-grid.cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ces-login-card { grid-template-columns: 1fr; max-width: 460px; }
+  .ces-login-side { display: none; }
+}
+@media (max-width: 575.98px) {
+  .ces-page { padding-top: 1rem; }
+  .ces-hero { padding: 1.2rem; }
+  .ces-stat-grid { grid-template-columns: 1fr 1fr; gap: .7rem; }
+  .ces-grid.cols-2, .ces-grid.cols-3 { grid-template-columns: 1fr; }
+  .ces-stat-value { font-size: 1.45rem; }
+  .ces-login-form { padding: 1.5rem; }
+}

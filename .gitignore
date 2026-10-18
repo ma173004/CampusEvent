@@ -1,0 +1,37 @@
+# ---- 作業系統 ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 編輯器 / IDE ----
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# ---- Node（本地 mock server 用）----
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- 本機設定 / 秘密（不要提交）----
+.env
+.env.*
+*.local
+ces_api_base.txt
+2-backend/config.local.gs
+
+# ---- 暫存 / 日誌 ----
+*.log
+*.tmp
+dist/
+build/
+coverage/
+
+# ---- 試算表匯出檔（若放本地）----
+*.xlsx
+*.xls
+*.csv
