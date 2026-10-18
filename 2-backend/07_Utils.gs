@@ -26,7 +26,7 @@ var CONFIG = {
   //  B. 独立脚本 → 把试算表 ID 填进来（URL 中 /d/ 与 /edit 之间那一串）。
   SPREADSHEET_ID: '',
   TIMEZONE: 'Asia/Hong_Kong',
-  VERSION: '1.0',
+  VERSION: '1.1',
   SHEET_USERS: 'Users',
   SHEET_EVENTS: 'Events',
   SHEET_REGISTRATIONS: 'Registrations',
@@ -38,10 +38,20 @@ var SHEET_HEADERS = {
   Users: ['UserID', 'Name', 'Role', 'Password', 'Email', 'Class', 'Club', 'Grade', 'IsOfficer'],
   Events: ['EventID', 'Name', 'Category', 'Location', 'RegStart', 'RegEnd', 'EventStart',
     'EventEnd', 'EligibleClasses', 'EligibleClubs', 'EligibleGrades', 'RequireOfficer',
-    'MaxQuota', 'HostID', 'Description', 'Status', 'CreatedAt'],
+    'MaxQuota', 'HostID', 'Description', 'Status', 'CreatedAt', 'IsMandatory'],
   Registrations: ['RegID', 'EventID', 'UserID', 'Status', 'Attended', 'RegTime'],
   Holidays: ['Date', 'Name']
 };
+
+/**
+ * 契约 7.2 資格選項白名單（前後端共用，禁止自由輸入）。
+ * 空字串或 'ALL' 代表不限；其餘必須全部落在白名單內。
+ */
+var CLASS_OPTIONS = ['1A', '1B', '1C', '1D', '2A', '2B', '2C', '2D', '3A', '3B', '3C', '3D',
+  '4A', '4B', '4C', '4D', '5A', '5B', '5C', '5D', '6A', '6B', '6C', '6D'];
+var GRADE_OPTIONS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
+var CLUB_OPTIONS = ['學生會', '美術學會', '體育學會', '音樂學會', '戲劇學會',
+  '義工團', '圖書館學會', '科學學會', '環保學會', '攝影學會'];
 
 /* ============================== 二、Sheet 读写 ============================== */
 
@@ -80,6 +90,21 @@ function readSheetObjects_(name) {
   var sheet = getSheet_(name);
   var headers = SHEET_HEADERS[name];
   var values = sheet.getDataRange().getValues();
+
+  // 表頭自動修復（契約 7.8）：既有表若缺新欄（如 v1.1 的 Events!R IsMandatory）
+  // 則自動補上表頭；舊資料該欄為空，讀取時一律視為 FALSE。
+  if (headers && values.length > 0) {
+    var headerRow = values[0];
+    var needFix = false;
+    for (var h = 0; h < headers.length; h++) {
+      if (cellText_(headerRow[h]) !== headers[h]) { needFix = true; break; }
+    }
+    if (needFix) {
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      sheet.setFrozenRows(1);
+    }
+  }
+
   var out = [];
 
   for (var i = 1; i < values.length; i++) {
@@ -259,6 +284,42 @@ function contains_(arr, v) {
   return false;
 }
 
+/** 任意输入转布尔（true / 'TRUE' / 'true' / 'Yes' / 1） */
+function boolParam_(v) {
+  if (v === true) return true;
+  var s = String(v === undefined || v === null ? '' : v).trim().toUpperCase();
+  return s === 'TRUE' || s === 'YES' || s === '1';
+}
+
+/**
+ * 契约 7.2：資格選項白名單校驗。
+ * - 空字串或 'ALL'（不分大小寫）→ 回傳 'ALL'
+ * - 逗號串中的每個值都必須在白名單內，否則 VALIDATION_ERROR 並指出非法值
+ * @param {*} value 原始輸入
+ * @param {string[]} options 白名單
+ * @param {string} label 中文欄位名（如「允許班級」）
+ * @return {string} 正規化後的 'ALL' 或 'a,b' 逗號串
+ */
+function validateOptionList_(value, options, label) {
+  var raw = String(value === undefined || value === null ? '' : value).trim();
+  if (raw === '' || isAll_(raw)) return 'ALL';
+
+  var parts = splitList_(raw);
+  var bad = [];
+  var good = [];
+  for (var i = 0; i < parts.length; i++) {
+    if (contains_(options, parts[i])) {
+      if (!contains_(good, parts[i])) good.push(parts[i]);
+    } else if (!contains_(bad, parts[i])) {
+      bad.push(parts[i]);
+    }
+  }
+  if (bad.length > 0) {
+    apiFail_('VALIDATION_ERROR', label + '含無效值：' + bad.join(','));
+  }
+  return good.length > 0 ? good.join(',') : 'ALL';
+}
+
 /* ============================== 五、ID 生成（契约 1.2 / 1.3） ============================== */
 
 /** 0->a, 25->z, 26->aa …（EventID 小写字母序号） */
@@ -359,7 +420,9 @@ function readEvents_() {
       hostID: cellText_(o.HostID),
       description: cellText_(o.Description),
       status: cellText_(o.Status) || 'Active',
-      createdAt: cellText_(o.CreatedAt)
+      createdAt: cellText_(o.CreatedAt),
+      // 契約 7.1：新增 R 欄 IsMandatory，舊資料缺欄一律視為 FALSE
+      isMandatory: cellBool_(o.IsMandatory)
     });
   }
   return out;
@@ -406,7 +469,8 @@ function eventRow_(e) {
     RegStart: e.regStart, RegEnd: e.regEnd, EventStart: e.eventStart, EventEnd: e.eventEnd,
     EligibleClasses: e.eligibleClasses, EligibleClubs: e.eligibleClubs, EligibleGrades: e.eligibleGrades,
     RequireOfficer: e.requireOfficer ? 'TRUE' : 'FALSE', MaxQuota: e.maxQuota, HostID: e.hostID,
-    Description: e.description, Status: e.status, CreatedAt: e.createdAt
+    Description: e.description, Status: e.status, CreatedAt: e.createdAt,
+    IsMandatory: e.isMandatory ? 'TRUE' : 'FALSE'
   };
 }
 
@@ -539,34 +603,44 @@ function seedUsers_() {
   ];
 }
 
-/** 契约 5.3 活动（CreatedAt 均 2026-10-01 09:00、Status=Active，Description 契约未给定故留空） */
+/** 契约 5.3 活动（CreatedAt 均 2026-10-01 09:00、Status=Active，Description 契约未给定故留空）
+ *  v1.1：末欄 IsMandatory，20260925a 為必須參加（TRUE），其餘 FALSE。 */
 function seedEvents_() {
   return [
-    ['20260925a', '中秋節慶祝會', '其他', '禮堂', '2026-09-10 08:00', '2026-09-20 18:00', '2026-09-25 15:00', '2026-09-25 17:00', 'ALL', 'ALL', 'ALL', 'FALSE', 100, 'T002', '', 'Active', '2026-10-01 09:00'],
-    ['20261020a', '旅行日介紹工作坊', '學術', '禮堂', '2026-10-10 08:00', '2026-10-19 18:00', '2026-10-20 09:00', '2026-10-20 12:00', 'ALL', 'ALL', 'ALL', 'FALSE', 60, 'T001', '', 'Active', '2026-10-01 09:00'],
-    ['20261020b', '圖書館導賞', '學術', '圖書館', '2026-10-10 08:00', '2026-10-19 18:00', '2026-10-20 14:00', '2026-10-20 15:30', 'ALL', 'ALL', 'ALL', 'FALSE', 30, 'T002', '', 'Active', '2026-10-01 09:00'],
-    ['20261021a', '園藝工作坊（候補示範）', '其他', '校園花園', '2026-10-10 08:00', '2026-10-20 18:00', '2026-10-21 15:00', '2026-10-21 17:00', 'ALL', 'ALL', 'ALL', 'FALSE', 2, 'T001', '', 'Active', '2026-10-01 09:00'],
-    ['20261022a', '美術學會寫生比賽', '藝術', '校園花園', '2026-10-12 08:00', '2026-10-21 23:59', '2026-10-22 14:00', '2026-10-22 17:00', 'ALL', '美術學會', 'ALL', 'FALSE', 20, 'T001', '', 'Active', '2026-10-01 09:00'],
-    ['20261024a', '義工團老人院探訪', '服務', '安老院（校外）', '2026-10-12 08:00', '2026-10-22 18:00', '2026-10-24 09:00', '2026-10-24 12:00', 'ALL', '義工團', 'ALL', 'FALSE', 15, 'T001', '', 'Active', '2026-10-01 09:00'],
-    ['20261028a', '籃球友誼賽', '體育', '籃球場', '2026-10-15 08:00', '2026-10-26 18:00', '2026-10-28 15:30', '2026-10-28 17:30', 'ALL', '體育學會', 'ALL', 'FALSE', 30, 'T002', '', 'Active', '2026-10-01 09:00'],
-    ['20261031a', '萬聖節派對', '其他', '學生活動中心', '2026-10-15 08:00', '2026-10-29 18:00', '2026-10-31 18:00', '2026-10-31 21:00', 'ALL', 'ALL', 'ALL', 'TRUE', 30, 'T001', '', 'Active', '2026-10-01 09:00'],
-    ['20261103a', '升學講座', '講座', '禮堂', '2026-10-15 08:00', '2026-11-01 18:00', '2026-11-03 14:00', '2026-11-03 16:00', 'ALL', 'ALL', 'S5,S6', 'FALSE', 200, 'T002', '', 'Active', '2026-10-01 09:00']
+    ['20260925a', '中秋節慶祝會', '其他', '禮堂', '2026-09-10 08:00', '2026-09-20 18:00', '2026-09-25 15:00', '2026-09-25 17:00', 'ALL', 'ALL', 'ALL', 'FALSE', 100, 'T002', '', 'Active', '2026-10-01 09:00', 'TRUE'],
+    ['20261020a', '旅行日介紹工作坊', '學術', '禮堂', '2026-10-10 08:00', '2026-10-19 18:00', '2026-10-20 09:00', '2026-10-20 12:00', 'ALL', 'ALL', 'ALL', 'FALSE', 60, 'T001', '', 'Active', '2026-10-01 09:00', 'FALSE'],
+    ['20261020b', '圖書館導賞', '學術', '圖書館', '2026-10-10 08:00', '2026-10-19 18:00', '2026-10-20 14:00', '2026-10-20 15:30', 'ALL', 'ALL', 'ALL', 'FALSE', 30, 'T002', '', 'Active', '2026-10-01 09:00', 'FALSE'],
+    ['20261021a', '園藝工作坊（候補示範）', '其他', '校園花園', '2026-10-10 08:00', '2026-10-20 18:00', '2026-10-21 15:00', '2026-10-21 17:00', 'ALL', 'ALL', 'ALL', 'FALSE', 2, 'T001', '', 'Active', '2026-10-01 09:00', 'FALSE'],
+    ['20261022a', '美術學會寫生比賽', '藝術', '校園花園', '2026-10-12 08:00', '2026-10-21 23:59', '2026-10-22 14:00', '2026-10-22 17:00', 'ALL', '美術學會', 'ALL', 'FALSE', 20, 'T001', '', 'Active', '2026-10-01 09:00', 'FALSE'],
+    ['20261024a', '義工團老人院探訪', '服務', '安老院（校外）', '2026-10-12 08:00', '2026-10-22 18:00', '2026-10-24 09:00', '2026-10-24 12:00', 'ALL', '義工團', 'ALL', 'FALSE', 15, 'T001', '', 'Active', '2026-10-01 09:00', 'FALSE'],
+    ['20261028a', '籃球友誼賽', '體育', '籃球場', '2026-10-15 08:00', '2026-10-26 18:00', '2026-10-28 15:30', '2026-10-28 17:30', 'ALL', '體育學會', 'ALL', 'FALSE', 30, 'T002', '', 'Active', '2026-10-01 09:00', 'FALSE'],
+    ['20261031a', '萬聖節派對', '其他', '學生活動中心', '2026-10-15 08:00', '2026-10-29 18:00', '2026-10-31 18:00', '2026-10-31 21:00', 'ALL', 'ALL', 'ALL', 'TRUE', 30, 'T001', '', 'Active', '2026-10-01 09:00', 'FALSE'],
+    ['20261103a', '升學講座', '講座', '禮堂', '2026-10-15 08:00', '2026-11-01 18:00', '2026-11-03 14:00', '2026-11-03 16:00', 'ALL', 'ALL', 'S5,S6', 'FALSE', 200, 'T002', '', 'Active', '2026-10-01 09:00', 'FALSE'],
+    ['20261019a', '升旗禮（必須參加示範）', '其他', '操場', '2026-10-15 08:00', '2026-10-18 18:00', '2026-10-19 08:00', '2026-10-19 08:30', 'ALL', 'ALL', 'ALL', 'FALSE', 0, 'T001', '', 'Active', '2026-10-01 09:00', 'TRUE']
   ];
 }
 
-/** 契约 5.4 报名（列序：RegID, EventID, UserID, Status, Attended, RegTime） */
+/** 契约 5.4 报名 + v1.1 7.8 補齊兩個必須參加活動的自動報名（共 17 筆） */
 function seedRegistrations_() {
   return [
     ['R20260911090000001', '20260925a', 'S2201', 'Confirmed', 'Yes', '2026-09-11 09:00'],
     ['R20260911090000002', '20260925a', 'S2202', 'Confirmed', 'Yes', '2026-09-11 10:00'],
     ['R20260911090000003', '20260925a', 'S2204', 'Confirmed', 'No', '2026-09-12 09:00'],
+    ['R20260912100000011', '20260925a', 'S2203', 'Confirmed', 'No', '2026-09-12 10:00'],
+    ['R20260912110000012', '20260925a', 'S2205', 'Confirmed', 'No', '2026-09-12 11:00'],
     ['R20261011090000004', '20261020a', 'S2201', 'Confirmed', 'No', '2026-10-11 09:00'],
     ['R20261011090000005', '20261020a', 'S2202', 'Confirmed', 'No', '2026-10-11 10:00'],
     ['R20261011090000006', '20261021a', 'S2201', 'Confirmed', 'No', '2026-10-11 11:00'],
     ['R20261011090000007', '20261021a', 'S2202', 'Confirmed', 'No', '2026-10-11 12:00'],
     ['R20261011090000008', '20261021a', 'S2203', 'Waitlist', 'No', '2026-10-11 13:00'],
     ['R20261013090000009', '20261022a', 'S2201', 'Confirmed', 'No', '2026-10-13 09:00'],
-    ['R20261016090000010', '20261028a', 'S2203', 'Confirmed', 'No', '2026-10-16 09:00']
+    ['R20261016090000010', '20261028a', 'S2203', 'Confirmed', 'No', '2026-10-16 09:00'],
+    // 20261019a 升旗禮（必須參加示範）自動報名（模擬 autoEnroll 結果）
+    ['R20261016090000013', '20261019a', 'S2201', 'Confirmed', 'No', '2026-10-16 09:00'],
+    ['R20261016090100014', '20261019a', 'S2202', 'Confirmed', 'No', '2026-10-16 09:01'],
+    ['R20261016090200015', '20261019a', 'S2203', 'Confirmed', 'No', '2026-10-16 09:02'],
+    ['R20261016090300016', '20261019a', 'S2204', 'Confirmed', 'No', '2026-10-16 09:03'],
+    ['R20261016090400017', '20261019a', 'S2205', 'Confirmed', 'No', '2026-10-16 09:04']
   ];
 }
 

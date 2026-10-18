@@ -142,6 +142,11 @@ function cancelRegistration_(params) {
   var event = getEventById_(events, eventID);
   if (!event) apiFail_('NOT_FOUND', '活動不存在');
 
+  // 契约 7.5：必须参加的活动不可取消（在未报名检查之前拦截）
+  if (event.isMandatory) {
+    apiFail_('MANDATORY_EVENT', '必須參加的活動不可取消報名，請聯絡負責老師');
+  }
+
   var reg = activeRegOf_(registrations, userID, eventID);
   if (!reg) apiFail_('NOT_REGISTERED', '未報名此活動');
 
@@ -275,8 +280,14 @@ function markAttendance_(params) {
   var registrations = readRegistrations_();
 
   var event = getEventById_(events, eventID);
-  if (!event) apiFail_('NOT_FOUND', '活動不存在');
+  // 契约 7.6：活動必須存在且為 Active（已取消的活動不能點名）
+  if (!event || event.status !== 'Active') apiFail_('NOT_FOUND', '活動不存在或已取消');
   requireHostOrAdmin_(operator, event);
+
+  // 契约 7.6：活動尚未開始不能點名
+  if (nowString_() < event.eventStart) {
+    apiFail_('EVENT_NOT_STARTED', '活動尚未開始，不能點名');
+  }
 
   var attended = (params.attended === undefined || params.attended === null || params.attended === '')
     ? 'Yes' : String(params.attended);

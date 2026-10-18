@@ -5,16 +5,20 @@
  * 契约对应：3.10 getDashboardStats
  * data：{totals, byClass, byCategory, byEvent}
  *
- * 统计口径（与 4-local-demo/server.js 完全一致）：
+ * 统计口径（v1.1，与 4-local-demo/server.js 完全一致）：
  *  - totals.events        = Events 表全部行数（含已取消）
  *  - totals.activeEvents  = Status=Active 的活动数
+ *  - totals.startedEvents = Status=Active 且 EventStart <= now 的活动数（契约 7.7）
+ *  - totals.pendingEvents = activeEvents - startedEvents（未开始数）
  *  - totals.registrations = Registrations 表全部行数（含 Cancelled）
- *  - totals.confirmed     = Status=Confirmed 的报名数
- *  - totals.attended      = Status=Confirmed 且 Attended=Yes 的人数
- *  - attendanceRate       = attended / confirmed * 100，保留 1 位小数
+ *  - totals.confirmed     = Status=Confirmed 的报名数（全部活动）
+ *  - totals.attended      = Status=Confirmed 且 Attended=Yes 的人数（全部活动）
+ *  - attendanceRate       = 只算「已开始的 Active 活动」的 Confirmed：attended / confirmed * 100，
+ *                           保留 1 位小数；分母 0 → 0（契约 7.7）
  *  - byClass              = 按学生班级统计「参与人次」（非 Cancelled 报名数）
  *  - byCategory           = 该分类活动数 count + 该分类非 Cancelled 报名数 registrations
- *  - byEvent              = 每个活动的 confirmed / waitlist / attended 数
+ *  - byEvent              = 每个活动的 confirmed / waitlist / attended，
+ *                           并加 started / isMandatory / attendanceRate（未开始 → null）
  * =============================================================================
  */
 
@@ -22,20 +26,35 @@ function getDashboardStats_(params) {
   var users = readUsers_();
   var events = readEvents_();
   var registrations = readRegistrations_();
+  var now = nowString_();
 
   /* ---------------- totals ---------------- */
   var activeEvents = 0;
+  var startedEvents = 0;
   for (var i = 0; i < events.length; i++) {
-    if (events[i].status === 'Active') activeEvents++;
+    if (events[i].status === 'Active') {
+      activeEvents++;
+      if (events[i].eventStart <= now) startedEvents++;
+    }
   }
+  var pendingEvents = activeEvents - startedEvents;
 
   var confirmed = 0;
   var attended = 0;
+  var startedConfirmed = 0;
+  var startedAttended = 0;
   for (var r = 0; r < registrations.length; r++) {
     var reg = registrations[r];
-    if (reg.status === 'Confirmed') {
-      confirmed++;
-      if (reg.attended === 'Yes') attended++;
+    if (reg.status !== 'Confirmed') continue;
+    confirmed++;
+    var isAttended = (reg.attended === 'Yes');
+    if (isAttended) attended++;
+
+    // 分母只算已开始的 Active 活动（契约 7.7）
+    var regEvent = getEventById_(events, reg.eventID);
+    if (regEvent && regEvent.status === 'Active' && regEvent.eventStart <= now) {
+      startedConfirmed++;
+      if (isAttended) startedAttended++;
     }
   }
 
@@ -45,13 +64,15 @@ function getDashboardStats_(params) {
   }
 
   var attendanceRate = 0;
-  if (confirmed > 0) {
-    attendanceRate = Math.round((attended / confirmed) * 1000) / 10;
+  if (startedConfirmed > 0) {
+    attendanceRate = Math.round((startedAttended / startedConfirmed) * 1000) / 10;
   }
 
   var totals = {
     events: events.length,
     activeEvents: activeEvents,
+    startedEvents: startedEvents,
+    pendingEvents: pendingEvents,
     registrations: registrations.length,
     confirmed: confirmed,
     attended: attended,
@@ -125,12 +146,25 @@ function getDashboardStats_(params) {
   var byEvent = [];
   for (var ev = 0; ev < events.length; ev++) {
     var event = events[ev];
+    var confirmedCount = countStatus_(registrations, event.eventID, 'Confirmed');
+    var waitlistCount = countStatus_(registrations, event.eventID, 'Waitlist');
+    var attendedCount = countAttended_(registrations, event.eventID);
+    var isStarted = now >= event.eventStart;
+    var eventRate = null;
+    if (isStarted) {
+      eventRate = confirmedCount > 0
+        ? Math.round((attendedCount / confirmedCount) * 1000) / 10
+        : 0;
+    }
     byEvent.push({
       eventID: event.eventID,
       name: event.name,
-      confirmed: countStatus_(registrations, event.eventID, 'Confirmed'),
-      waitlist: countStatus_(registrations, event.eventID, 'Waitlist'),
-      attended: countAttended_(registrations, event.eventID)
+      confirmed: confirmedCount,
+      waitlist: waitlistCount,
+      attended: attendedCount,
+      started: isStarted,
+      isMandatory: !!event.isMandatory,
+      attendanceRate: eventRate
     });
   }
 

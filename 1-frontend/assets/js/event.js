@@ -39,6 +39,21 @@
     return 'event_detail.html?id=' + encodeURIComponent(e.eventID);
   }
 
+  /* v1.1：「必須參加」活動（老師點名、自動報名、不可取消） */
+  function isMandatory(e) { return !!(e && e.isMandatory === true); }
+
+  function mandatoryBadge(e) {
+    if (!isMandatory(e)) return '';
+    return '<span class="badge-mandatory" title="必須參加（老師點名，不可取消報名）">' +
+      '<i class="bi bi-exclamation-circle-fill"></i>必須參加</span>';
+  }
+
+  /* v1.1：後端回傳 started（now >= EventStart）；舊回應則以字串比較回退 */
+  function hasStarted(e) {
+    if (e && typeof e.started === 'boolean') return e.started;
+    return !!(e && e.eventStart && e.eventStart <= nowText());
+  }
+
   function eligibilityRules(e) {
     var parts = [];
     if (!isBlank(e.eligibleClasses) && e.eligibleClasses !== 'ALL') parts.push('班別：' + e.eligibleClasses);
@@ -84,6 +99,9 @@
     else if (code === 'NOT_ELIGIBLE') CES_UI.toast(msg || '不符合報名資格', 'warning');
     else if (code === 'EVENT_STARTED') CES_UI.toast('活動已開始，無法報名', 'warning');
     else if (code === 'NOT_REGISTERED') CES_UI.toast('你尚未報名此活動', 'warning');
+    else if (code === 'MANDATORY_EVENT') {
+      CES_UI.toast(msg || '必須參加的活動不可取消報名，請聯絡負責老師', 'warning');
+    } else if (code === 'EVENT_NOT_STARTED') CES_UI.toast(msg || '活動尚未開始', 'warning');
     else if (code === 'NOT_FOUND') CES_UI.toast('找不到此活動', 'danger');
     else if (isNetworkError(code)) CES_UI.toast(BACKEND_MSG, 'danger');
     else CES_UI.toast(msg || '操作失敗，請稍後再試', 'danger');
@@ -385,9 +403,15 @@
       '<a class="btn btn-sm btn-outline-secondary" href="' + detailLink(e) + '">詳情</a>';
 
     if (e.myStatus === 'Confirmed' || e.myStatus === 'Waitlist') {
-      var cancelLabel = e.myStatus === 'Waitlist' ? '取消候補' : '取消報名';
-      html += '<button type="button" class="btn btn-sm btn-outline-danger" data-action="cancel" ' +
-        'data-id="' + id + '">' + cancelLabel + '</button>';
+      if (isMandatory(e)) {
+        /* 必須參加：不提供取消入口 */
+        html += '<button type="button" class="btn btn-sm btn-outline-secondary" disabled ' +
+          'title="必須參加的活動不可取消報名，請聯絡負責老師">不可取消</button>';
+      } else {
+        var cancelLabel = e.myStatus === 'Waitlist' ? '取消候補' : '取消報名';
+        html += '<button type="button" class="btn btn-sm btn-outline-danger" data-action="cancel" ' +
+          'data-id="' + id + '">' + cancelLabel + '</button>';
+      }
     } else if (isActive(e) && e.isEligible !== false && e.isRegOpen === true) {
       html += '<button type="button" class="btn btn-sm btn-ces-primary" data-action="register" ' +
         'data-id="' + id + '">' + (e.isFull ? '報名候補' : '快速報名') + '</button>';
@@ -406,7 +430,9 @@
     var rowClass = isActive(e) ? '' : ' class="opacity-75"';
     return '<tr' + rowClass + '>' +
       '<td class="small muted">' + esc(e.eventID) + '</td>' +
-      '<td><a class="fw-semibold" href="' + detailLink(e) + '">' + esc(e.name) + '</a></td>' +
+      '<td><div class="d-flex flex-wrap align-items-center gap-1">' +
+      '<a class="fw-semibold" href="' + detailLink(e) + '">' + esc(e.name) + '</a>' +
+      mandatoryBadge(e) + '</div></td>' +
       '<td>' + (e.category ? '<span class="tag">' + esc(e.category) + '</span>' : '<span class="muted">—</span>') + '</td>' +
       '<td>' + timeCellHtml(e) + '</td>' +
       '<td class="small">' + esc(e.location) + '</td>' +
@@ -427,7 +453,8 @@
     return '<div class="ces-card ces-event-card">' +
       '<div class="card-cover"></div>' +
       '<div class="d-flex justify-content-between align-items-start gap-2">' +
-      '<h3 class="mb-0"><a href="' + detailLink(e) + '">' + esc(e.name) + '</a></h3>' +
+      '<h3 class="mb-0"><a href="' + detailLink(e) + '">' + esc(e.name) + '</a> ' +
+      mandatoryBadge(e) + '</h3>' +
       '<div class="flex-shrink-0">' + statusHtml + '</div>' +
       '</div>' +
       '<div class="meta mt-2">' +
@@ -564,6 +591,7 @@
         '<div class="min-w-0">' +
         '<div class="d-flex flex-wrap align-items-center gap-2 mb-2">' +
         (e.category ? '<span class="tag">' + esc(e.category) + '</span>' : '') +
+        mandatoryBadge(e) +
         '<span class="badge-status ' + (live ? 'is-confirmed' : 'is-cancelled') + '">' +
         (live ? '開放報名' : '已取消') + '</span>' +
         '</div>' +
@@ -589,6 +617,9 @@
       infoBody.innerHTML =
         infoRow('活動編號', esc(e.eventID)) +
         infoRow('類別', e.category ? '<span class="tag">' + esc(e.category) + '</span>' : '<span class="muted">—</span>') +
+        infoRow('參加性質', isMandatory(e) ? mandatoryBadge(e) +
+          '<span class="muted small ms-2">老師點名，系統已自動報名，不可取消</span>' :
+          '<span class="muted">自願報名</span>') +
         infoRow('狀態', live ? '<span class="badge-status is-confirmed">開放報名</span>' :
           '<span class="badge-status is-cancelled">已取消</span>') +
         infoRow('負責老師', esc(e.hostName || e.hostID || '—') +
@@ -620,9 +651,10 @@
     var my = e.myStatus;
     var html = '';
 
-    html += '<div class="mb-3">' +
+    html += '<div class="mb-3 d-flex flex-wrap align-items-center gap-2">' +
       (live ? (my === 'Cancelled' ? CES_UI.statusBadge(null) : CES_UI.statusBadge(my))
         : '<span class="badge-status is-cancelled">活動已取消</span>') +
+      mandatoryBadge(e) +
       '</div>';
 
     html += '<div class="mb-3">' + quotaBlockHtml(e) + '</div>';
@@ -637,8 +669,12 @@
 
     var notice = '';
     if (!live) notice = '此活動已取消，無法報名。';
-    else if (my === 'Confirmed') notice = '你已成功報名，請準時出席。';
-    else if (my === 'Waitlist') notice = '名額已滿，你目前位於候補名單。';
+    else if (my === 'Confirmed' && isMandatory(e)) {
+      notice = '這是必須參加的活動，系統已為你自動報名；老師會點名，報名不可取消。';
+    } else if (my === 'Confirmed') notice = '你已成功報名，請準時出席。';
+    else if (my === 'Waitlist' && isMandatory(e)) {
+      notice = '名額已滿，你目前位於候補名單；必須參加的活動不可取消。';
+    } else if (my === 'Waitlist') notice = '名額已滿，你目前位於候補名單。';
     else if (my === 'Cancelled') notice = '你曾取消此活動的報名，可重新報名。';
     else if (e.isEligible === false) notice = '你未符合本活動的報名資格。';
     else if (e.isFull) notice = '名額已滿，現在報名將自動加入候補名單。';
@@ -653,6 +689,14 @@
     var btn;
     if (!live) {
       btn = disabledActionBtn('活動已取消');
+    } else if (isMandatory(e) && (my === 'Confirmed' || my === 'Waitlist')) {
+      /* 必須參加：不可取消（按鈕保留但禁用，並說明原因） */
+      btn = disabledActionBtn(
+        my === 'Waitlist' ? '候補中（必須參加，不可取消）' : '必須參加（已自動報名）',
+        '必須參加的活動不可取消報名，請聯絡負責老師'
+      ) +
+        '<div class="small muted text-center mt-2">' +
+        '<i class="bi bi-info-circle me-1"></i>必須參加的活動不可取消</div>';
     } else if (my === 'Confirmed') {
       btn = '<button type="button" class="btn btn-outline-danger" data-action="cancel" data-id="' + id + '">' +
         '已報名（取消報名）</button>';
@@ -661,13 +705,13 @@
         '候補中（取消候補）</button>';
     } else if (e.isEligible === false) {
       btn = disabledActionBtn('不符合報名資格', e.eligibleReason);
-    } else if (e.eventStart && e.eventStart <= now) {
+    } else if (hasStarted(e)) {
       btn = disabledActionBtn('活動已開始');
     } else if (!e.isRegOpen) {
       btn = disabledActionBtn((e.regStart && now < e.regStart) ? '報名尚未開始' : '報名已截止');
     } else {
       btn = '<button type="button" class="btn btn-ces-primary" data-action="register" data-id="' + id + '">' +
-        (e.isFull ? '候補報名' : '立即報名') + '</button>';
+        (isMandatory(e) ? '報名（必須參加）' : (e.isFull ? '候補報名' : '立即報名')) + '</button>';
     }
 
     html += '<div class="d-grid mt-3">' + btn + '</div>';

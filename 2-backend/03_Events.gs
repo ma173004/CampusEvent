@@ -75,6 +75,7 @@ function getCalendarData_(params) {
   var events = readEvents_();
   var registrations = readRegistrations_();
   var holidays = readHolidays_();
+  var now = nowString_();
 
   holidays.sort(function (a, b) {
     if (a.date !== b.date) return a.date < b.date ? -1 : 1;
@@ -109,6 +110,9 @@ function getCalendarData_(params) {
       location: ev.location,
       category: ev.category,
       status: ev.status,
+      // 契约 7.3：日历事件同样带 isMandatory / started
+      isMandatory: !!ev.isMandatory,
+      started: now >= ev.eventStart,
       type: type
     });
   }
@@ -189,10 +193,17 @@ function manageEvent_(params) {
       hostID: hostID,
       description: normalized.description,
       status: 'Active',
-      createdAt: nowString_()
+      createdAt: nowString_(),
+      isMandatory: normalized.isMandatory
     };
     saveEventRow_(newEvent);
-    return okEnvelope_({ eventID: newEvent.eventID });
+
+    // 契约 7.4：必须参加的活动 → 为所有符合资格且尚无有效报名的学生自动建 Confirmed 报名
+    var autoEnrolled = 0;
+    if (newEvent.isMandatory) {
+      autoEnrolled = autoEnrollMandatory_(newEvent, users, readRegistrations_());
+    }
+    return okEnvelope_({ eventID: newEvent.eventID, autoEnrolled: autoEnrolled });
   }
 
   /* ---------- update ---------- */
@@ -228,10 +239,72 @@ function manageEvent_(params) {
   if (payload.description !== undefined && payload.description !== null) {
     oldEvent.description = String(payload.description);
   }
+  // v1.1：必须参加属性（契约 7.4）
+  oldEvent.isMandatory = normalized.isMandatory;
   // 更新不改变 Status / CreatedAt / EventID（取消请用 mode=cancel）
   saveEventRow_(oldEvent);
 
-  return okEnvelope_({ eventID: oldEvent.eventID });
+  // 契约 7.4：更新为必须参加时也补齐自动报名（已报名的不会重复）
+  var autoEnrolled = 0;
+  if (oldEvent.isMandatory) {
+    autoEnrolled = autoEnrollMandatory_(oldEvent, users, readRegistrations_());
+  }
+  return okEnvelope_({ eventID: oldEvent.eventID, autoEnrolled: autoEnrolled });
+}
+
+/**
+ * 契约 7.4：为「必须参加」的活动自动报名。
+ * 条件：role === 'Student'、符合资格、尚无有效报名（非 Cancelled）。
+ * 已存在 Cancelled 旧记录时复用该行，否则新增；RegTime = 当前时间、Attended = No。
+ * @param {Object} event 活动对象
+ * @param {Array} users 用户表
+ * @param {Array} registrations 报名表（会被就地追加）
+ * @return {number} 新建/复用的报名数
+ */
+function autoEnrollMandatory_(event, users, registrations) {
+  var now = nowString_();
+  var existingIDs = [];
+  for (var i = 0; i < registrations.length; i++) existingIDs.push(registrations[i].regID);
+
+  var count = 0;
+  for (var u = 0; u < users.length; u++) {
+    var user = users[u];
+    if (user.role !== 'Student') continue;
+    var eligibility = checkEligibility_(user, event);
+    if (!eligibility.eligible) continue;
+    if (activeRegOf_(registrations, user.userID, event.eventID)) continue;
+
+    var target = null;
+    for (var r = 0; r < registrations.length; r++) {
+      var reg = registrations[r];
+      if (reg.eventID === event.eventID && reg.userID === user.userID && reg.status === 'Cancelled') {
+        target = reg;
+        break;
+      }
+    }
+
+    if (target) {
+      target.status = 'Confirmed';
+      target.attended = 'No';
+      target.regTime = now;
+      saveRegistrationRow_(target);
+    } else {
+      target = {
+        _row: 0,
+        regID: generateRegID_(existingIDs),
+        eventID: event.eventID,
+        userID: user.userID,
+        status: 'Confirmed',
+        attended: 'No',
+        regTime: now
+      };
+      saveRegistrationRow_(target);
+      registrations.push(target);
+    }
+    existingIDs.push(target.regID);
+    count++;
+  }
+  return count;
 }
 
 /**
@@ -281,6 +354,11 @@ function validateEventPayload_(payload) {
   var requireOfficer = payload.requireOfficer === true ||
     String(payload.requireOfficer === undefined || payload.requireOfficer === null ? '' : payload.requireOfficer).toUpperCase() === 'TRUE';
 
+  // 契约 7.2：三个资格字段必须落在白名单内（空 / ALL / 逗号分隔白名单值）
+  var eligibleClasses = validateOptionList_(payload.eligibleClasses, CLASS_OPTIONS, '允許班級');
+  var eligibleClubs = validateOptionList_(payload.eligibleClubs, CLUB_OPTIONS, '允許學會');
+  var eligibleGrades = validateOptionList_(payload.eligibleGrades, GRADE_OPTIONS, '允許年級');
+
   return {
     name: name,
     category: str(payload.category) || '其他',
@@ -289,12 +367,14 @@ function validateEventPayload_(payload) {
     regEnd: regEnd,
     eventStart: eventStart,
     eventEnd: eventEnd,
-    eligibleClasses: str(payload.eligibleClasses) || 'ALL',
-    eligibleClubs: str(payload.eligibleClubs) || 'ALL',
-    eligibleGrades: str(payload.eligibleGrades) || 'ALL',
+    eligibleClasses: eligibleClasses,
+    eligibleClubs: eligibleClubs,
+    eligibleGrades: eligibleGrades,
     requireOfficer: requireOfficer,
     maxQuota: maxQuota,
-    description: str(payload.description)
+    description: str(payload.description),
+    // 契约 7.4：必须参加属性（缺省 false）
+    isMandatory: boolParam_(payload.isMandatory)
   };
 }
 
@@ -358,7 +438,10 @@ function buildEventView_(event, userID, users, events, registrations, now) {
     eligibleReason: eligibility.reason,
     hasConflict: conflicts.length > 0,
     isFull: remaining === 0,
-    isRegOpen: now >= event.regStart && now <= event.regEnd
+    isRegOpen: now >= event.regStart && now <= event.regEnd,
+    // 契约 7.3：必须参加 / 是否已开始
+    isMandatory: !!event.isMandatory,
+    started: now >= event.eventStart
   };
 }
 

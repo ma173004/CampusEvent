@@ -19,7 +19,7 @@ var fs = require('fs');
 var path = require('path');
 var urlLib = require('url');
 
-var VERSION = '1.0';
+var VERSION = '1.1';
 var TZ = 'Asia/Hong_Kong';
 var PORT = parseInt(process.env.PORT, 10) || 8787;
 var API_PREFIX = '/api';
@@ -101,6 +101,43 @@ function toInt(v, def) {
   return isNaN(n) ? def : n;
 }
 
+/** 任意输入转布尔（true / 'TRUE' / 'Yes' / 1）—— 契约 7.4 isMandatory */
+function boolParam(v) {
+  if (v === true) return true;
+  var s = String(v == null ? '' : v).trim().toUpperCase();
+  return s === 'TRUE' || s === 'YES' || s === '1';
+}
+
+/**
+ * 契约 7.2：資格選項白名單（與 GAS 07_Utils.gs 完全一致）
+ * 空字串或 ALL → 'ALL'；否則每個值都必須在白名單內。
+ */
+var CLASS_OPTIONS = ['1A', '1B', '1C', '1D', '2A', '2B', '2C', '2D', '3A', '3B', '3C', '3D',
+  '4A', '4B', '4C', '4D', '5A', '5B', '5C', '5D', '6A', '6B', '6C', '6D'];
+var GRADE_OPTIONS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
+var CLUB_OPTIONS = ['學生會', '美術學會', '體育學會', '音樂學會', '戲劇學會',
+  '義工團', '圖書館學會', '科學學會', '環保學會', '攝影學會'];
+
+function validateOptionList(value, options, label) {
+  var raw = String(value == null ? '' : value).trim();
+  if (raw === '' || isAll(raw)) return 'ALL';
+
+  var parts = splitList(raw);
+  var bad = [];
+  var good = [];
+  parts.forEach(function (part) {
+    if (options.indexOf(part) !== -1) {
+      if (good.indexOf(part) === -1) good.push(part);
+    } else if (bad.indexOf(part) === -1) {
+      bad.push(part);
+    }
+  });
+  if (bad.length > 0) {
+    fail('VALIDATION_ERROR', label + '含無效值：' + bad.join(','));
+  }
+  return good.length > 0 ? good.join(',') : 'ALL';
+}
+
 /* =============================================================================
  * 二、种子数据（契约第 5 节，GAS setupDatabase() 与 mock 共用同一份）
  * =========================================================================== */
@@ -118,7 +155,7 @@ function createSeedData() {
   ];
 
   var events = [
-    seedEvent('20260925a', '中秋節慶祝會', '其他', '禮堂', '2026-09-10 08:00', '2026-09-20 18:00', '2026-09-25 15:00', '2026-09-25 17:00', 'ALL', 'ALL', 'ALL', false, 100, 'T002'),
+    seedEvent('20260925a', '中秋節慶祝會', '其他', '禮堂', '2026-09-10 08:00', '2026-09-20 18:00', '2026-09-25 15:00', '2026-09-25 17:00', 'ALL', 'ALL', 'ALL', false, 100, 'T002', true),
     seedEvent('20261020a', '旅行日介紹工作坊', '學術', '禮堂', '2026-10-10 08:00', '2026-10-19 18:00', '2026-10-20 09:00', '2026-10-20 12:00', 'ALL', 'ALL', 'ALL', false, 60, 'T001'),
     seedEvent('20261020b', '圖書館導賞', '學術', '圖書館', '2026-10-10 08:00', '2026-10-19 18:00', '2026-10-20 14:00', '2026-10-20 15:30', 'ALL', 'ALL', 'ALL', false, 30, 'T002'),
     seedEvent('20261021a', '園藝工作坊（候補示範）', '其他', '校園花園', '2026-10-10 08:00', '2026-10-20 18:00', '2026-10-21 15:00', '2026-10-21 17:00', 'ALL', 'ALL', 'ALL', false, 2, 'T001'),
@@ -126,20 +163,29 @@ function createSeedData() {
     seedEvent('20261024a', '義工團老人院探訪', '服務', '安老院（校外）', '2026-10-12 08:00', '2026-10-22 18:00', '2026-10-24 09:00', '2026-10-24 12:00', 'ALL', '義工團', 'ALL', false, 15, 'T001'),
     seedEvent('20261028a', '籃球友誼賽', '體育', '籃球場', '2026-10-15 08:00', '2026-10-26 18:00', '2026-10-28 15:30', '2026-10-28 17:30', 'ALL', '體育學會', 'ALL', false, 30, 'T002'),
     seedEvent('20261031a', '萬聖節派對', '其他', '學生活動中心', '2026-10-15 08:00', '2026-10-29 18:00', '2026-10-31 18:00', '2026-10-31 21:00', 'ALL', 'ALL', 'ALL', true, 30, 'T001'),
-    seedEvent('20261103a', '升學講座', '講座', '禮堂', '2026-10-15 08:00', '2026-11-01 18:00', '2026-11-03 14:00', '2026-11-03 16:00', 'ALL', 'ALL', 'S5,S6', false, 200, 'T002')
+    seedEvent('20261103a', '升學講座', '講座', '禮堂', '2026-10-15 08:00', '2026-11-01 18:00', '2026-11-03 14:00', '2026-11-03 16:00', 'ALL', 'ALL', 'S5,S6', false, 200, 'T002'),
+    seedEvent('20261019a', '升旗禮（必須參加示範）', '其他', '操場', '2026-10-15 08:00', '2026-10-18 18:00', '2026-10-19 08:00', '2026-10-19 08:30', 'ALL', 'ALL', 'ALL', false, 0, 'T001', true)
   ];
 
   var registrations = [
     seedReg('R20260911090000001', '20260925a', 'S2201', 'Confirmed', 'Yes', '2026-09-11 09:00'),
     seedReg('R20260911090000002', '20260925a', 'S2202', 'Confirmed', 'Yes', '2026-09-11 10:00'),
     seedReg('R20260911090000003', '20260925a', 'S2204', 'Confirmed', 'No', '2026-09-12 09:00'),
+    seedReg('R20260912100000011', '20260925a', 'S2203', 'Confirmed', 'No', '2026-09-12 10:00'),
+    seedReg('R20260912110000012', '20260925a', 'S2205', 'Confirmed', 'No', '2026-09-12 11:00'),
     seedReg('R20261011090000004', '20261020a', 'S2201', 'Confirmed', 'No', '2026-10-11 09:00'),
     seedReg('R20261011090000005', '20261020a', 'S2202', 'Confirmed', 'No', '2026-10-11 10:00'),
     seedReg('R20261011090000006', '20261021a', 'S2201', 'Confirmed', 'No', '2026-10-11 11:00'),
     seedReg('R20261011090000007', '20261021a', 'S2202', 'Confirmed', 'No', '2026-10-11 12:00'),
     seedReg('R20261011090000008', '20261021a', 'S2203', 'Waitlist', 'No', '2026-10-11 13:00'),
     seedReg('R20261013090000009', '20261022a', 'S2201', 'Confirmed', 'No', '2026-10-13 09:00'),
-    seedReg('R20261016090000010', '20261028a', 'S2203', 'Confirmed', 'No', '2026-10-16 09:00')
+    seedReg('R20261016090000010', '20261028a', 'S2203', 'Confirmed', 'No', '2026-10-16 09:00'),
+    // 20261019a 升旗禮（必須參加示範）自動報名（模擬 autoEnroll 結果）
+    seedReg('R20261016090000013', '20261019a', 'S2201', 'Confirmed', 'No', '2026-10-16 09:00'),
+    seedReg('R20261016090100014', '20261019a', 'S2202', 'Confirmed', 'No', '2026-10-16 09:01'),
+    seedReg('R20261016090200015', '20261019a', 'S2203', 'Confirmed', 'No', '2026-10-16 09:02'),
+    seedReg('R20261016090300016', '20261019a', 'S2204', 'Confirmed', 'No', '2026-10-16 09:03'),
+    seedReg('R20261016090400017', '20261019a', 'S2205', 'Confirmed', 'No', '2026-10-16 09:04')
   ];
 
   var holidays = [
@@ -153,13 +199,15 @@ function createSeedData() {
 }
 
 function seedEvent(eventID, name, category, location, regStart, regEnd, eventStart, eventEnd,
-                   eligibleClasses, eligibleClubs, eligibleGrades, requireOfficer, maxQuota, hostID) {
+                   eligibleClasses, eligibleClubs, eligibleGrades, requireOfficer, maxQuota, hostID,
+                   isMandatory) {
   return {
     eventID: eventID, name: name, category: category, location: location,
     regStart: regStart, regEnd: regEnd, eventStart: eventStart, eventEnd: eventEnd,
     eligibleClasses: eligibleClasses, eligibleClubs: eligibleClubs, eligibleGrades: eligibleGrades,
     requireOfficer: requireOfficer, maxQuota: maxQuota, hostID: hostID,
-    description: '', status: 'Active', createdAt: '2026-10-01 09:00'
+    description: '', status: 'Active', createdAt: '2026-10-01 09:00',
+    isMandatory: isMandatory === true
   };
 }
 
@@ -382,7 +430,10 @@ function buildEventView(ev, userID) {
     eligibleReason: elig.reason,
     hasConflict: conflicts.length > 0,
     isFull: remaining === 0,
-    isRegOpen: now >= ev.regStart && now <= ev.regEnd
+    isRegOpen: now >= ev.regStart && now <= ev.regEnd,
+    // 契约 7.3：必须参加 / 是否已开始
+    isMandatory: !!ev.isMandatory,
+    started: now >= ev.eventStart
   };
 }
 
@@ -519,6 +570,7 @@ ACTIONS.getEvent = function (p) {
 /* 3.4 getCalendarData (GET) */
 ACTIONS.getCalendarData = function (p) {
   var userID = p.userID ? String(p.userID) : '';
+  var now = nowStr();
 
   var holidays = DATA.holidays.slice().sort(function (a, b) {
     return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
@@ -534,7 +586,8 @@ ACTIONS.getCalendarData = function (p) {
     else if (mine === 'Confirmed' || mine === 'Waitlist') type = 'joined';
     return {
       eventID: ev.eventID, name: ev.name, start: ev.eventStart, end: ev.eventEnd,
-      location: ev.location, category: ev.category, status: ev.status, type: type
+      location: ev.location, category: ev.category, status: ev.status,
+      isMandatory: !!ev.isMandatory, started: now >= ev.eventStart, type: type
     };
   });
 
@@ -629,6 +682,11 @@ ACTIONS.cancelRegistration = function (p) {
   var ev = getEvent(eventID);
   if (!ev) fail('NOT_FOUND', '活動不存在');
 
+  // 契约 7.5：必须参加的活动不可取消（在未报名检查之前拦截）
+  if (ev.isMandatory) {
+    fail('MANDATORY_EVENT', '必須參加的活動不可取消報名，請聯絡負責老師');
+  }
+
   var reg = activeRegOf(userID, eventID);
   if (!reg) fail('NOT_REGISTERED', '未報名此活動');
 
@@ -695,7 +753,10 @@ ACTIONS.manageEvent = function (p) {
     normalized.createdAt = nowStr();
     normalized.description = payload.description == null ? '' : String(payload.description);
     DATA.events.push(normalized);
-    return ok({ eventID: normalized.eventID });
+
+    // 契约 7.4：必须参加 → 自动为所有符合资格且尚无有效报名的学生建 Confirmed
+    var autoEnrolled = normalized.isMandatory ? autoEnrollMandatory(normalized) : 0;
+    return ok({ eventID: normalized.eventID, autoEnrolled: autoEnrolled });
   }
 
   /* ---- update ---- */
@@ -722,8 +783,44 @@ ACTIONS.manageEvent = function (p) {
     : String(payload.description);
 
   Object.keys(normalized).forEach(function (k) { old[k] = normalized[k]; });
-  return ok({ eventID: old.eventID });
+
+  // 契约 7.4：更新为必须参加时也补齐自动报名（已报名的不会重复）
+  var autoEnrolled = old.isMandatory ? autoEnrollMandatory(old) : 0;
+  return ok({ eventID: old.eventID, autoEnrolled: autoEnrolled });
 };
+
+/**
+ * 契约 7.4：为「必须参加」的活动自动报名。
+ * 条件：role === 'Student'、符合资格、尚无有效报名（非 Cancelled）。
+ * 已存在 Cancelled 旧记录时复用该行，否则新增；RegTime = 当前时间、Attended = No。
+ * @return {number} 新建/复用的报名数
+ */
+function autoEnrollMandatory(ev) {
+  var now = nowStr();
+  var count = 0;
+  DATA.users.forEach(function (u) {
+    if (u.role !== 'Student') return;
+    if (!checkEligibility(u, ev).eligible) return;
+    if (activeRegOf(u.userID, ev.eventID)) return;
+
+    var cancelled = DATA.registrations.filter(function (r) {
+      return r.eventID === ev.eventID && r.userID === u.userID && r.status === 'Cancelled';
+    })[0];
+
+    if (cancelled) {
+      cancelled.status = 'Confirmed';
+      cancelled.attended = 'No';
+      cancelled.regTime = now;
+    } else {
+      DATA.registrations.push({
+        regID: newRegID(), eventID: ev.eventID, userID: u.userID,
+        status: 'Confirmed', attended: 'No', regTime: now
+      });
+    }
+    count++;
+  });
+  return count;
+}
 
 /** manageEvent 字段校验（契约 3.7） */
 function validateEventPayload(payload) {
@@ -767,12 +864,15 @@ function validateEventPayload(payload) {
     regEnd: regEnd,
     eventStart: eventStart,
     eventEnd: eventEnd,
-    eligibleClasses: str(payload.eligibleClasses) || 'ALL',
-    eligibleClubs: str(payload.eligibleClubs) || 'ALL',
-    eligibleGrades: str(payload.eligibleGrades) || 'ALL',
+    // 契约 7.2：资格字段白名单校验（空 / ALL / 逗号分隔白名单值）
+    eligibleClasses: validateOptionList(payload.eligibleClasses, CLASS_OPTIONS, '允許班級'),
+    eligibleClubs: validateOptionList(payload.eligibleClubs, CLUB_OPTIONS, '允許學會'),
+    eligibleGrades: validateOptionList(payload.eligibleGrades, GRADE_OPTIONS, '允許年級'),
     requireOfficer: payload.requireOfficer === true || String(payload.requireOfficer) === 'true' || String(payload.requireOfficer).toUpperCase() === 'TRUE',
     maxQuota: maxQuota,
-    description: str(payload.description)
+    description: str(payload.description),
+    // 契约 7.4：必须参加属性（缺省 false）
+    isMandatory: boolParam(payload.isMandatory)
   };
 }
 
@@ -809,8 +909,16 @@ ACTIONS.getParticipantList = function (p) {
 /* 3.9 markAttendance (POST) */
 ACTIONS.markAttendance = function (p) {
   var operator = requireOperator(p.userID, ['Teacher', 'Admin'], '未授權的操作（只限老師或管理員）');
-  var ev = requireEvent(p.eventID);
+  var eventID = p.eventID ? String(p.eventID) : '';
+  if (!eventID) fail('INVALID_PARAM', '缺少參數：eventID');
+
+  // 契约 7.6：活動必須存在且為 Active（已取消的活動不能點名）
+  var ev = getEvent(eventID);
+  if (!ev || ev.status !== 'Active') fail('NOT_FOUND', '活動不存在或已取消');
   requireHostOrAdmin(operator, ev);
+
+  // 契约 7.6：活動尚未開始不能點名
+  if (nowStr() < ev.eventStart) fail('EVENT_NOT_STARTED', '活動尚未開始，不能點名');
 
   var targetUserID = p.targetUserID ? String(p.targetUserID) : '';
   if (!targetUserID) fail('INVALID_PARAM', '缺少參數：targetUserID');
@@ -833,17 +941,34 @@ ACTIONS.markAttendance = function (p) {
 ACTIONS.getDashboardStats = function (p) {
   var events = DATA.events;
   var regs = DATA.registrations;
+  var now = nowStr();
+
+  var activeEventList = events.filter(function (e) { return e.status === 'Active'; });
+  var startedEvents = activeEventList.filter(function (e) { return e.eventStart <= now; }).length;
+  var pendingEvents = activeEventList.length - startedEvents;
 
   var confirmed = regs.filter(function (r) { return r.status === 'Confirmed'; });
   var attendedCount = regs.filter(function (r) { return r.status === 'Confirmed' && r.attended === 'Yes'; }).length;
 
+  // 契约 7.7：出席率分母只算「已开始的 Active 活动」的 Confirmed
+  var startedConfirmed = 0;
+  var startedAttended = 0;
+  confirmed.forEach(function (r) {
+    var ev = getEvent(r.eventID);
+    if (!ev || ev.status !== 'Active' || ev.eventStart > now) return;
+    startedConfirmed++;
+    if (r.attended === 'Yes') startedAttended++;
+  });
+
   var totals = {
     events: events.length,
-    activeEvents: events.filter(function (e) { return e.status === 'Active'; }).length,
+    activeEvents: activeEventList.length,
+    startedEvents: startedEvents,
+    pendingEvents: pendingEvents,
     registrations: regs.length,
     confirmed: confirmed.length,
     attended: attendedCount,
-    attendanceRate: confirmed.length > 0 ? Math.round((attendedCount / confirmed.length) * 1000) / 10 : 0,
+    attendanceRate: startedConfirmed > 0 ? Math.round((startedAttended / startedConfirmed) * 1000) / 10 : 0,
     users: DATA.users.length,
     students: DATA.users.filter(function (u) { return u.role === 'Student'; }).length
   };
@@ -888,12 +1013,20 @@ ACTIONS.getDashboardStats = function (p) {
     return a.eventID < b.eventID ? -1 : 1;
   }).map(function (e) {
     var er = regsOfEvent(e.eventID);
+    var confirmedCount = er.filter(function (r) { return r.status === 'Confirmed'; }).length;
+    var attendedOfEvent = er.filter(function (r) { return r.status === 'Confirmed' && r.attended === 'Yes'; }).length;
+    var started = now >= e.eventStart;
     return {
       eventID: e.eventID,
       name: e.name,
-      confirmed: er.filter(function (r) { return r.status === 'Confirmed'; }).length,
+      confirmed: confirmedCount,
       waitlist: er.filter(function (r) { return r.status === 'Waitlist'; }).length,
-      attended: er.filter(function (r) { return r.status === 'Confirmed' && r.attended === 'Yes'; }).length
+      attended: attendedOfEvent,
+      started: started,
+      isMandatory: !!e.isMandatory,
+      attendanceRate: started
+        ? (confirmedCount > 0 ? Math.round((attendedOfEvent / confirmedCount) * 1000) / 10 : 0)
+        : null
     };
   });
 
@@ -1173,7 +1306,8 @@ server.listen(PORT, '127.0.0.1', function () {
   console.log('              T001 / teacher123    （老師·李老師）');
   console.log('              T002 / teacher123    （老師·黃老師）');
   console.log('              S2201~S2205 / student123（學生）');
-  console.log('   種子資料 ：8 用戶 / 9 活動 / 10 報名 / 4 紅日（記憶體，重啟即重置）');
+  console.log('   種子資料 ：8 用戶 / 10 活動 / 17 報名 / 4 紅日（記憶體，重啟即重置）');
+  console.log('   版本     ：v' + VERSION + '（含必須參加活動、白名單、點名時序、統計口徑）');
   console.log('   停止服務 ：Ctrl + C');
   console.log('============================================================');
 });

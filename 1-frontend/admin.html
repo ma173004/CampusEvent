@@ -87,6 +87,7 @@
             <span class="muted small" id="participantHint"></span>
           </div>
           <div id="participantQuota" class="mb-1"></div>
+          <div id="participantNotice" class="mb-1"></div>
         </div>
 
         <div class="ces-card">
@@ -230,19 +231,34 @@
               </div>
 
               <div class="col-md-4">
-                <label class="form-label" for="evClasses">允許班級</label>
-                <input type="text" class="form-control" id="evClasses" value="ALL" placeholder="ALL 或 5A,5B">
-                <div class="invalid-feedback">格式錯誤</div>
+                <label class="form-label d-block" id="evClassesLabel">允許班級</label>
+                <div class="chip-group" id="evClassesGroup" data-chip-group="classes"
+                  role="group" aria-labelledby="evClassesLabel"></div>
+                <div class="chip-group-hint">不勾選＝全部班級（只能點選，不能輸入文字）</div>
+                <div class="chip-group-actions">
+                  <button type="button" class="btn btn-ces-ghost" data-chip-all="classes">全選</button>
+                  <button type="button" class="btn btn-ces-ghost" data-chip-none="classes">清除</button>
+                </div>
               </div>
               <div class="col-md-4">
-                <label class="form-label" for="evGrades">允許年級</label>
-                <input type="text" class="form-control" id="evGrades" value="ALL" placeholder="ALL 或 S5,S6">
-                <div class="invalid-feedback">格式錯誤</div>
+                <label class="form-label d-block" id="evGradesLabel">允許年級</label>
+                <div class="chip-group" id="evGradesGroup" data-chip-group="grades"
+                  role="group" aria-labelledby="evGradesLabel"></div>
+                <div class="chip-group-hint">不勾選＝全部年級（只能點選，不能輸入文字）</div>
+                <div class="chip-group-actions">
+                  <button type="button" class="btn btn-ces-ghost" data-chip-all="grades">全選</button>
+                  <button type="button" class="btn btn-ces-ghost" data-chip-none="grades">清除</button>
+                </div>
               </div>
               <div class="col-md-4">
-                <label class="form-label" for="evClubs">允許學會</label>
-                <input type="text" class="form-control" id="evClubs" value="ALL" placeholder="ALL 或 美術學會,義工團">
-                <div class="invalid-feedback">格式錯誤</div>
+                <label class="form-label d-block" id="evClubsLabel">允許學會</label>
+                <div class="chip-group" id="evClubsGroup" data-chip-group="clubs"
+                  role="group" aria-labelledby="evClubsLabel"></div>
+                <div class="chip-group-hint">不勾選＝全部學會（只能點選，不能輸入文字）</div>
+                <div class="chip-group-actions">
+                  <button type="button" class="btn btn-ces-ghost" data-chip-all="clubs">全選</button>
+                  <button type="button" class="btn btn-ces-ghost" data-chip-none="clubs">清除</button>
+                </div>
               </div>
 
               <div class="col-12 d-none" id="hostFieldWrap">
@@ -256,6 +272,16 @@
                   <input class="form-check-input" type="checkbox" id="evRequireOfficer">
                   <label class="form-check-label" for="evRequireOfficer">僅限學生幹事報名</label>
                 </div>
+              </div>
+
+              <div class="col-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="evIsMandatory">
+                  <label class="form-check-label" for="evIsMandatory">
+                    必須參加（自動為合資格學生報名，需要點名）
+                  </label>
+                </div>
+                <div class="form-text">勾選後，所有合資格且尚未報名的學生會自動加入確認名單，毋須自行報名。</div>
               </div>
 
               <div class="col-12">

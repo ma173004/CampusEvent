@@ -16,6 +16,17 @@
 
   function esc(v) { return CES_UI.escapeHtml(v); }
 
+  /* v1.1：「必須參加」活動徽章 */
+  function mandatoryBadge(e) {
+    if (!e || e.isMandatory !== true) return '';
+    return '<span class="badge-mandatory"><i class="bi bi-exclamation-circle-fill"></i>必須參加</span>';
+  }
+
+  function hasStarted(e, now) {
+    if (e && typeof e.started === 'boolean') return e.started;
+    return !!(e && e.eventStart && e.eventStart <= now);
+  }
+
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
   function ymd(date) {
@@ -161,8 +172,10 @@
     events.forEach(function (e) {
       if (!e || !e.start) return;
       var type = e.type === 'host' ? 'host' : (e.type === 'joined' ? 'joined' : 'other');
-      var cls = type === 'host' ? 'fc-event-host' :
-        (type === 'joined' ? 'fc-event-joined' : 'fc-event-other');
+      /* v1.1：必須參加優先於主持/參加配色（假期為獨立事件，不受影響） */
+      var cls = e.isMandatory === true ? 'fc-event-mandatory' :
+        (type === 'host' ? 'fc-event-host' :
+          (type === 'joined' ? 'fc-event-joined' : 'fc-event-other'));
       fcEvents.push({
         id: 'fc_' + (e.eventID || e.name),
         title: e.name || '活動',
@@ -171,6 +184,7 @@
         classNames: [cls],
         extendedProps: {
           kind: type,
+          mandatory: e.isMandatory === true,
           eventID: e.eventID || '',
           location: e.location || '',
           category: e.category || '',
@@ -209,7 +223,7 @@
       },
       eventDidMount: function (info) {
         var props = info.event.extendedProps || {};
-        var tip = [info.event.title];
+        var tip = [info.event.title + (props.mandatory ? '（必須參加）' : '')];
         if (props.category) tip.push('類別：' + props.category);
         if (props.location) tip.push('地點：' + props.location);
         if (info.event.start) tip.push('開始：' + fmtDateTime(info.event.start));
@@ -239,11 +253,12 @@
       return e && e.myStatus === 'Confirmed';
     });
     var upcoming = events.filter(function (e) {
-      return e && e.status === 'Active' && e.eventStart && e.eventStart > now;
+      return e && e.status === 'Active' && e.eventStart && e.eventStart > now && !hasStarted(e, now);
     });
     var todo = events.filter(function (e) {
       return e && e.status === 'Active' && (!e.myStatus || e.myStatus === 'Cancelled') &&
-        e.isEligible !== false && e.isRegOpen === true && e.eventStart && e.eventStart > now;
+        e.isEligible !== false && e.isRegOpen === true && e.eventStart && e.eventStart > now &&
+        !hasStarted(e, now);
     });
 
     setText('statJoined', joined.length);
@@ -270,7 +285,7 @@
     var now = data.now || nowText();
 
     var list = events.filter(function (e) {
-      return e && e.status === 'Active' && e.eventStart && e.eventStart > now;
+      return e && e.status === 'Active' && e.eventStart && e.eventStart > now && !hasStarted(e, now);
     }).sort(function (a, b) {
       return a.eventStart < b.eventStart ? -1 : (a.eventStart > b.eventStart ? 1 : 0);
     }).slice(0, 5);
@@ -307,6 +322,7 @@
         '</div>' +
         '<div class="small mt-1 d-flex flex-wrap align-items-center gap-1">' +
         (e.category ? '<span class="tag">' + esc(e.category) + '</span>' : '') +
+        mandatoryBadge(e) +
         status +
         '<span class="tag tag-soft">' + esc(quota) + '</span>' +
         '</div>' +
@@ -373,6 +389,9 @@
     else if (code === 'REG_CLOSED') CES_UI.toast(msg || '報名已截止', 'warning');
     else if (code === 'NOT_ELIGIBLE') CES_UI.toast(msg || '不符合報名資格', 'warning');
     else if (code === 'EVENT_STARTED') CES_UI.toast('活動已開始，無法報名', 'warning');
+    else if (code === 'MANDATORY_EVENT') {
+      CES_UI.toast(msg || '必須參加的活動不可取消報名，請聯絡負責老師', 'warning');
+    } else if (code === 'EVENT_NOT_STARTED') CES_UI.toast(msg || '活動尚未開始', 'warning');
     else if (code === 'NOT_FOUND') CES_UI.toast('找不到此活動', 'danger');
     else if (isNetworkError(code)) CES_UI.toast(BACKEND_MSG, 'danger');
     else CES_UI.toast(msg || '報名失敗，請稍後再試', 'danger');
