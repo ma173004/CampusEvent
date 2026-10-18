@@ -15,6 +15,9 @@
  *  - totals.attended      = Status=Confirmed 且 Attended=Yes 的人数（全部活动）
  *  - attendanceRate       = 只算「已开始的 Active 活动」的 Confirmed：attended / confirmed * 100，
  *                           保留 1 位小数；分母 0 → 0（契约 7.7）
+ *  - totals.attendance    = v1.2 契约 8.3 的「已開始活動出席情況」物件：
+ *                           {scope:'started', eventCount, eventNames, confirmed, attended,
+ *                            absent, rate}（只計 Status=Active 且 EventStart<=now 的 Confirmed）
  *  - byClass              = 按学生班级统计「参与人次」（非 Cancelled 报名数）
  *  - byCategory           = 该分类活动数 count + 该分类非 Cancelled 报名数 registrations
  *  - byEvent              = 每个活动的 confirmed / waitlist / attended，
@@ -31,10 +34,14 @@ function getDashboardStats_(params) {
   /* ---------------- totals ---------------- */
   var activeEvents = 0;
   var startedEvents = 0;
+  var startedEventNames = [];
   for (var i = 0; i < events.length; i++) {
     if (events[i].status === 'Active') {
       activeEvents++;
-      if (events[i].eventStart <= now) startedEvents++;
+      if (events[i].eventStart <= now) {
+        startedEvents++;
+        startedEventNames.push(events[i].name);
+      }
     }
   }
   var pendingEvents = activeEvents - startedEvents;
@@ -78,7 +85,17 @@ function getDashboardStats_(params) {
     attended: attended,
     attendanceRate: attendanceRate,
     users: users.length,
-    students: studentCount
+    students: studentCount,
+    // 契约 8.3：只計「已開始的 Active 活動」的 Confirmed，供前端出席情況圓餅圖
+    attendance: {
+      scope: 'started',
+      eventCount: startedEvents,
+      eventNames: startedEventNames,
+      confirmed: startedConfirmed,
+      attended: startedAttended,
+      absent: startedConfirmed - startedAttended,
+      rate: attendanceRate
+    }
   };
 
   /* ---------------- byClass ---------------- */

@@ -26,7 +26,7 @@ var CONFIG = {
   //  B. 独立脚本 → 把试算表 ID 填进来（URL 中 /d/ 与 /edit 之间那一串）。
   SPREADSHEET_ID: '',
   TIMEZONE: 'Asia/Hong_Kong',
-  VERSION: '1.1',
+  VERSION: '1.2',
   SHEET_USERS: 'Users',
   SHEET_EVENTS: 'Events',
   SHEET_REGISTRATIONS: 'Registrations',

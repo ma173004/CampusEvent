@@ -42,6 +42,11 @@
   /* v1.1：「必須參加」活動（老師點名、自動報名、不可取消） */
   function isMandatory(e) { return !!(e && e.isMandatory === true); }
 
+  /* v1.2：只有學生參與報名；教師／管理員帳號一律不渲染報名／取消 UI */
+  function isStudentUser(u) { return !!u && u.role === 'Student'; }
+
+  var STAFF_NO_REGISTER_TEXT = '教師／管理員帳號不參與學生報名，負責老師可在後台管理名單與點名。';
+
   function mandatoryBadge(e) {
     if (!isMandatory(e)) return '';
     return '<span class="badge-mandatory" title="必須參加（老師點名，不可取消報名）">' +
@@ -139,6 +144,13 @@
    */
   function doRegister(eventID, user, onSuccess, onSettled) {
     function done() { if (onSettled) onSettled(); }
+
+    if (!isStudentUser(user)) {
+      /* v1.2：非學生帳號不參與報名（正常情況不會有按鈕可觸發） */
+      CES_UI.toast('教師／管理員帳號不參與學生報名', 'info');
+      done();
+      return;
+    }
 
     API.registerEvent(eventID, user.userID, false).then(function (data) {
       onRegisterSuccess(data, onSuccess);
@@ -402,6 +414,9 @@
     var html = '<div class="d-flex flex-wrap gap-1 justify-content-lg-end">' +
       '<a class="btn btn-sm btn-outline-secondary" href="' + detailLink(e) + '">詳情</a>';
 
+    /* v1.2：非學生帳號的操作欄只保留「詳情」 */
+    if (!isStudentUser(listState.user)) return html + '</div>';
+
     if (e.myStatus === 'Confirmed' || e.myStatus === 'Waitlist') {
       if (isMandatory(e)) {
         /* 必須參加：不提供取消入口 */
@@ -645,7 +660,26 @@
       (title ? ' title="' + esc(title) + '"' : '') + '>' + esc(label) + '</button>';
   }
 
+  /* v1.2：非學生帳號的「報名狀態」卡 —— 不渲染任何報名／取消按鈕，只顯示灰字提示 */
+  function staffActionHtml(e) {
+    var live = isActive(e);
+    var html = '<div class="mb-3 d-flex flex-wrap align-items-center gap-2">' +
+      (live
+        ? '<span class="badge-status is-confirmed">開放報名</span>'
+        : '<span class="badge-status is-cancelled">活動已取消</span>') +
+      mandatoryBadge(e) +
+      '</div>';
+    html += '<div class="mb-3">' + quotaBlockHtml(e) + '</div>';
+    html += '<div class="small muted"><i class="bi bi-clock me-1"></i>報名時段：' +
+      esc(CES_UI.fmtDT(e.regStart)) + ' 至 ' + esc(CES_UI.fmtDT(e.regEnd)) + '</div>';
+    html += '<div class="small muted mt-3">' +
+      '<i class="bi bi-info-circle me-1"></i>' + esc(STAFF_NO_REGISTER_TEXT) + '</div>';
+    return html;
+  }
+
   function actionHtml(e) {
+    if (!isStudentUser(detailState.user)) return staffActionHtml(e);
+
     var live = isActive(e);
     var now = nowText();
     var my = e.myStatus;

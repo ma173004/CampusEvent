@@ -221,12 +221,17 @@
     var eventModalBody = $('eventModal');
     if (eventModalBody) {
       eventModalBody.addEventListener('click', onChipActionClick);
+      // v1.2：chips / requireOfficer 變更 → 防抖預覽資格人數（契約 8.5）
+      eventModalBody.addEventListener('change', onEligibilityFieldChange);
     }
 
     if ($('eventModal') && typeof bootstrap !== 'undefined') {
       eventModal = new bootstrap.Modal($('eventModal'));
       $('eventModal').addEventListener('hidden.bs.modal', function () {
         clearFormInvalid($('eventForm'));
+        // v1.2：關閉時取消未完成的預覽請求
+        if (eligPreviewTimer) { clearTimeout(eligPreviewTimer); eligPreviewTimer = null; }
+        eligPreviewSeq++;
       });
     } else if ($('eventModal')) {
       CES_UI.toast('Bootstrap 載入失敗，新增／修改活動視窗無法使用', 'warning');
@@ -400,12 +405,92 @@
       var allBtn = e.target.closest('button[data-chip-all]');
       if (allBtn) {
         chipSetAll(allBtn.dataset.chipAll, true);
+        scheduleEligibilityPreview(false); // v1.2：按鈕不會觸發 change，手動更新預覽
         return;
       }
       var noneBtn = e.target.closest('button[data-chip-none]');
       if (noneBtn) {
         chipSetAll(noneBtn.dataset.chipNone, false);
+        scheduleEligibilityPreview(false);
       }
+    }
+
+    /* ---- v1.2：資格人數即時預覽（契約 8.2 / 8.5） ---- */
+    var eligPreviewTimer = null;
+    var eligPreviewSeq = 0;
+    var ELIG_PREVIEW_DEBOUNCE_MS = 400;
+
+    /** chips / 僅限學生幹事 變更 → 防抖 400ms 查詢 */
+    function onEligibilityFieldChange(e) {
+      var t = e.target;
+      if (!t) return;
+      var isChip = t.matches && t.matches('.chip-group input[type="checkbox"]');
+      var isOfficer = t.id === 'evRequireOfficer';
+      if (!isChip && !isOfficer) return;
+      scheduleEligibilityPreview(false);
+    }
+
+    /** immediate=true 用於初次開啟 modal（契約 8.5：初次也查一次） */
+    function scheduleEligibilityPreview(immediate) {
+      if (eligPreviewTimer) clearTimeout(eligPreviewTimer);
+      eligPreviewTimer = setTimeout(function () {
+        eligPreviewTimer = null;
+        refreshEligibilityPreview();
+      }, immediate ? 0 : ELIG_PREVIEW_DEBOUNCE_MS);
+    }
+
+    function setEligibilityPreviewHtml(html) {
+      var host = $('eligibilityPreview');
+      if (host) host.innerHTML = html;
+    }
+
+    /** 顯示「符合條件的學生：N 人」；N=0 紅色警告；失敗灰字且不擋儲存 */
+    function refreshEligibilityPreview() {
+      var host = $('eligibilityPreview');
+      if (!host) return;
+
+      var seq = ++eligPreviewSeq;
+      var payload = {
+        userID: user.userID,
+        classes: chipGetValue('classes'),
+        grades: chipGetValue('grades'),
+        clubs: chipGetValue('clubs'),
+        requireOfficer: $('evRequireOfficer') ? $('evRequireOfficer').checked === true : false
+      };
+
+      setEligibilityPreviewHtml('<span class="text-muted">正在計算符合條件的學生…</span>');
+
+      API.previewEligibility(payload).then(function (data) {
+        if (seq !== eligPreviewSeq) return; // 較舊的回應，丟棄（避免競態）
+        var count = num(data && data.count);
+        if (count <= 0) {
+          setEligibilityPreviewHtml(
+            '<div class="alert alert-danger d-flex align-items-start gap-2 py-2 mb-0" role="alert">' +
+              '<i class="bi bi-exclamation-triangle-fill mt-1"></i>' +
+              '<div><strong>目前沒有學生符合，這個活動將無人可報名</strong>' +
+                '<div class="small mt-1">請放寬班級／年級／學會條件，或取消「僅限學生幹事報名」。</div>' +
+              '</div>' +
+            '</div>'
+          );
+          return;
+        }
+        var students = (data && data.students) || [];
+        var examples = students.slice(0, 2).map(function (s) {
+          return s.name + (s.className ? ' ' + s.className : '');
+        });
+        setEligibilityPreviewHtml(
+          '<div class="text-success">' +
+            '<i class="bi bi-people me-1"></i><strong>符合條件的學生：' + count + ' 人</strong>' +
+            (examples.length ? '<span class="muted">（例：' + esc(examples.join('、')) + '）</span>' : '') +
+          '</div>'
+        );
+      }).catch(function () {
+        if (seq !== eligPreviewSeq) return;
+        // 後端尚未實作 / 其他錯誤：只顯示灰字，不影響儲存（契約 8.5）
+        setEligibilityPreviewHtml(
+          '<span class="text-muted"><i class="bi bi-question-circle me-1"></i>無法預覽資格人數</span>'
+        );
+      });
     }
 
     function openEventModal(ev) {
@@ -460,6 +545,10 @@
       } else {
         if (hostWrap) hostWrap.classList.add('d-none');
       }
+
+      // v1.2：初次開啟自動查一次資格人數（全 ALL → 5 人）；修改時依回填值查詢
+      setEligibilityPreviewHtml('');
+      scheduleEligibilityPreview(true);
 
       if (eventModal) eventModal.show();
     }
@@ -1012,10 +1101,49 @@
     }
 
     function renderAttendanceChart(totals) {
-      var attended = num(totals.attended);
-      var confirmed = num(totals.confirmed);
-      var absent = Math.max(0, confirmed - attended);
+      totals = totals || {};
+
+      // 契約 8.3：圓餅圖只認 totals.attendance（只計已開始活動的 Confirmed）；
+      // 舊後端沒有 attendance 時 fallback 用 v1.1 口徑（totals.attended / totals.confirmed）。
+      var att = (totals.attendance && typeof totals.attendance === 'object') ? totals.attendance : null;
+      var attended, absent, eventCount, eventNames;
+      var usingAttendance = !!att;
+
+      if (att) {
+        attended = num(att.attended);
+        absent = num(att.confirmed) - attended;
+        if (att.confirmed === undefined || att.confirmed === null || !isFinite(Number(att.confirmed))) {
+          absent = num(att.absent);
+        }
+        absent = Math.max(0, absent);
+        eventCount = num(att.eventCount);
+        eventNames = att.eventNames || [];
+      } else {
+        attended = num(totals.attended);
+        absent = Math.max(0, num(totals.confirmed) - attended);
+        eventCount = num(totals.startedEvents);
+        eventNames = [];
+      }
+
       var total = attended + absent;
+
+      // 契約 8.3：標題固定「已開始活動的出席情況」；副標顯示納入的活動數與名稱
+      var titleEl = $('attendanceChartTitle');
+      if (titleEl) titleEl.textContent = '已開始活動的出席情況';
+      var subEl = $('attendanceChartSub');
+      if (subEl) {
+        subEl.textContent = usingAttendance
+          ? '納入 ' + eventCount + ' 場已開始活動' +
+            (eventNames.length ? '：' + eventNames.join('、') : '')
+          : '已出席 vs 未出席';
+      }
+
+      // 空狀態文案：新口徑下明確是「已開始活動」
+      var emptyEl = $('attendanceEmpty');
+      if (emptyEl) {
+        emptyEl.innerHTML = '<i class="bi bi-pie-chart"></i>' +
+          (usingAttendance ? '目前已開始活動暫無已確認的報名資料' : '暫無已確認的報名資料');
+      }
 
       var canvas = $('chartAttendance');
       if (!canvas) return;

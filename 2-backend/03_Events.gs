@@ -482,6 +482,70 @@ function checkEligibility_(user, event) {
   return { eligible: reasons.length === 0, reason: reasons.join('；') };
 }
 
+/* ============================== v1.2 8.2 previewEligibility ============================== */
+
+/**
+ * 契约 8.2：資格 chips 預覽——給定 classes / grades / clubs / requireOfficer，
+ * 回傳「這樣設定會有多少學生符合」。資格語意同 checkEligibility_：
+ * 同一欄內多選＝OR，不同欄之間＝AND；空或 ALL＝該欄不限。
+ * 請求：?action=previewEligibility&userID=T001&classes=1A,1B&grades=S1&clubs=ALL&requireOfficer=false
+ * data：{count, students:[{userID,name,className,grade,clubs[]}]（最多 20，只含 Role=Student）,
+ *        rule:{classes,grades,clubs,requireOfficer}, text}
+ */
+function previewEligibility_(params) {
+  requireOperator_(params.userID, ['Teacher', 'Admin'], '未授權的操作（只限老師或管理員）');
+
+  // 白名單驗證同 manageEvent（契約 7.2 / 8.2），非法值 → VALIDATION_ERROR
+  var classes = validateOptionList_(params.classes, CLASS_OPTIONS, '允許班級');
+  var grades = validateOptionList_(params.grades, GRADE_OPTIONS, '允許年級');
+  var clubs = validateOptionList_(params.clubs, CLUB_OPTIONS, '允許學會');
+  var requireOfficer = boolParam_(params.requireOfficer);
+
+  // 把「條件」當成一個虛擬活動，直接複用 checkEligibility_ 的 AND/OR 語意
+  var filterEvent = {
+    eligibleClasses: classes,
+    eligibleGrades: grades,
+    eligibleClubs: clubs,
+    requireOfficer: requireOfficer
+  };
+
+  var users = readUsers_();
+  var students = [];
+  var count = 0;
+  for (var i = 0; i < users.length; i++) {
+    var u = users[i];
+    if (u.role !== 'Student') continue;
+    if (!checkEligibility_(u, filterEvent).eligible) continue;
+    count++;
+    if (students.length < 20) {
+      students.push({
+        userID: u.userID,
+        name: u.name,
+        className: u.class,
+        grade: u.grade,
+        clubs: splitList_(u.club)
+      });
+    }
+  }
+
+  return okEnvelope_({
+    count: count,
+    students: students,
+    rule: {
+      classes: previewRuleValue_(classes),
+      grades: previewRuleValue_(grades),
+      clubs: previewRuleValue_(clubs),
+      requireOfficer: requireOfficer
+    },
+    text: '符合條件學生共 ' + count + ' 人'
+  });
+}
+
+/** 契約 8.2 rule 欄位：不限 → 'ALL'，有限制 → 陣列（例 ["1A","1B"]） */
+function previewRuleValue_(normalized) {
+  return isAll_(normalized) ? 'ALL' : splitList_(normalized);
+}
+
 /** 当前用户对某活动的报名状态：Confirmed > Waitlist > Cancelled > null */
 function myStatusOf_(registrations, eventID, userID) {
   if (!userID) return null;

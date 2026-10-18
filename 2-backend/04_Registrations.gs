@@ -6,8 +6,11 @@
  *           3.8 getParticipantList / 3.9 markAttendance
  *
  * registerEvent 的业务顺序严格按契约 3.5（命中即返回，不得调换）：
- *   1 活动存在且 Active → 2 资格 → 3 重复报名 → 4 报名窗口
- *   → 5 已开始 → 6 撞期（confirm 可跳过）→ 7 名额/候补 → 8 写表。
+ *   1 活动存在且 Active → 1.5 角色必须为 Student（v1.2 契约 8.1）→ 2 资格
+ *   → 3 重复报名 → 4 报名窗口 → 5 已开始 → 6 撞期（confirm 可跳过）
+ *   → 7 名额/候补 → 8 写表。
+ *   cancelRegistration 顺序：使用者存在 → 角色 Student（8.1）→ 活动存在
+ *   → 必须参加 → 有效报名存在 → 取消。
  * =============================================================================
  */
 
@@ -39,6 +42,11 @@ function registerEvent_(params) {
   // 用户必须存在（后续资格/写表都需要）
   var user = getUser_(users, userID);
   if (!user) apiFail_('NOT_AUTHORIZED', '未授權的操作（使用者不存在）');
+
+  // 1.5 契约 8.1：报名是学生的行为，教师／管理员账号不需报名
+  if (user.role !== 'Student') {
+    apiFail_('ROLE_NOT_ALLOWED', '只有學生可以報名活動（教師／管理員帳號不需報名）');
+  }
 
   // 2. 资格校验
   var eligibility = checkEligibility_(user, event);
@@ -138,6 +146,11 @@ function cancelRegistration_(params) {
 
   var user = getUser_(users, userID);
   if (!user) apiFail_('NOT_AUTHORIZED', '未授權的操作（使用者不存在）');
+
+  // 契约 8.1：報名／取消都只限學生（在活動存在、必須參加等檢查之前）
+  if (user.role !== 'Student') {
+    apiFail_('ROLE_NOT_ALLOWED', '只有學生可以報名活動（教師／管理員帳號不需報名）');
+  }
 
   var event = getEventById_(events, eventID);
   if (!event) apiFail_('NOT_FOUND', '活動不存在');

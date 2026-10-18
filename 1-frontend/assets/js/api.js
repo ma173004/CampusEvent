@@ -158,6 +158,19 @@
       return get('getDashboardStats', { userID: userID || '' });
     },
 
+    // v1.2：資格人數預覽（契約 8.2）
+    // classes / grades / clubs：逗號串，空字串或 'ALL' = 該欄不限
+    previewEligibility: function (opts) {
+      opts = opts || {};
+      return get('previewEligibility', {
+        userID: opts.userID || '',
+        classes: opts.classes || '',
+        grades: opts.grades || '',
+        clubs: opts.clubs || '',
+        requireOfficer: opts.requireOfficer === true
+      });
+    },
+
     // 权限
     getUsers: function (userID) { return get('getUsers', { userID: userID }); },
     updateUserRole: function (userID, targetUserID, role) {

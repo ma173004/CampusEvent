@@ -3,7 +3,7 @@
 本目錄提供一個**與 GAS 後端語義完全一致**的本地 mock server，方便在沒有 Google 帳號 / 未部署 Apps Script 時直接跑整個系統做演示與驗收。
 
 - 純 Node 內建模組（`http` / `fs` / `path` / `url`），**不需要 `npm install`**。
-- API 根路徑：`http://127.0.0.1:8787/api`，行為定義見 `3-docs/05_API契约与数据字典.md`（**契約 v1.1**）。
+- API 根路徑：`http://127.0.0.1:8787/api`，行為定義見 `3-docs/05_API契约与数据字典.md`（**契約 v1.2**）。
 - 同時靜態託管 `1-frontend/`，瀏覽器打開 `http://127.0.0.1:8787/` 即進入 `login.html`。
 - 資料存**記憶體**（契約第 5 節種子資料），重啟即重置；不寫任何檔案。
 - `health` 回 `version: "1.1"`，與 GAS 端一致。
@@ -120,6 +120,24 @@ curl.exe -X POST "http://127.0.0.1:8787/api" -H "Content-Type: text/plain" --dat
 curl.exe "http://127.0.0.1:8787/api?action=getDashboardStats&userID=T001"
 ```
 
+### 4.4 v1.2 新行為（後端）
+
+```powershell
+# 角色限制：教師／管理員不可報名或取消報名 → ROLE_NOT_ALLOWED
+curl.exe -X POST "http://127.0.0.1:8787/api" -H "Content-Type: text/plain" --data-raw '{\"action\":\"registerEvent\",\"eventID\":\"20261020b\",\"userID\":\"T001\"}'
+curl.exe -X POST "http://127.0.0.1:8787/api" -H "Content-Type: text/plain" --data-raw '{\"action\":\"cancelRegistration\",\"eventID\":\"20261019a\",\"userID\":\"T001\"}'
+
+# 資格預覽（Teacher/Admin 專用，GET；classes/grades/clubs 逗號分隔，空或 ALL 表不限；requireOfficer 預設 false）
+curl.exe "http://127.0.0.1:8787/api?action=previewEligibility&userID=T001"
+curl.exe "http://127.0.0.1:8787/api?action=previewEligibility&userID=T001&classes=5A"
+curl.exe "http://127.0.0.1:8787/api?action=previewEligibility&userID=T001&classes=1A,1B&grades=S2"
+# 非法白名單 → VALIDATION_ERROR；缺 userID 或學生帳號 → NOT_AUTHORIZED
+curl.exe "http://127.0.0.1:8787/api?action=previewEligibility&userID=T001&classes=12"
+
+# 統計：totals.attendance 只算「已開始的 Active 活動」的 Confirmed
+curl.exe "http://127.0.0.1:8787/api?action=getDashboardStats&userID=U001"
+```
+
 > 也可用 `Invoke-RestMethod`：`Invoke-RestMethod "http://127.0.0.1:8787/api?action=health"`；POST 見 `Invoke-RestMethod -Method Post -ContentType 'text/plain' -Body '{"action":"login",...}'`。
 >
 > 所有 API 一律回 HTTP 200，以 JSON 的 `success` 欄位判斷成敗；失敗時 `code` 為契約錯誤碼（`AUTH_FAILED` / `CONFLICT` / `NOT_ELIGIBLE` …），`message` 為繁體中文提示。
@@ -159,3 +177,14 @@ curl.exe "http://127.0.0.1:8787/api?action=getDashboardStats&userID=T001"
 - **埠 8787 被占用**：`netstat -ano | findstr :8787` 找到 PID 後 `taskkill /PID <pid> /F`，或設定 `$env:PORT=8788` 啟動（前端 `api.js` 會跟隨 `localhost` 但固定 8787，故正式演示建議用 8787）。
 - **打開 `/` 顯示 404**：代表 `1-frontend/login.html` 尚未建立（前端由另一部分交付）；API 本身可用 `curl` 直測。
 - **POST 回 `INVALID_PARAM`**：body 必須是合法 JSON 且包含 `action`；`Content-Type` 用 `text/plain` 或 `application/json` 均可。
+
+## 9. v1.2 契約變更速查（後端）
+
+| 項目 | 內容 |
+|---|---|
+| 報名角色限制 | `registerEvent`：使用者存在後、其他業務檢查前，`role !== 'Student'` → `ROLE_NOT_ALLOWED`「只有學生可以報名活動（教師／管理員帳號不需報名）」；`cancelRegistration` 同順序同樣限制（先角色、後活動存在） |
+| 新 action `previewEligibility` | `GET`，`requireOperator_(userID, ['Teacher','Admin'])`，否則 `NOT_AUTHORIZED`；參數 `classes` / `grades` / `clubs`（逗號分隔，空或 `ALL` = 不限，白名單同 `manageEvent`）、`requireOfficer`（`true`/`false`，預設 `false`） |
+| `previewEligibility` 回傳 | `data = {count, students:[{userID,name,className,grade,clubs:[...]}]（最多 20，只含 Student）, rule:{classes,grades,clubs,requireOfficer}, text:"符合條件學生共 N 人"}`；資格語意：同欄 OR、跨欄 AND；`count = 0` → `students: []` |
+| 統計 `totals.attendance` | 新物件：`{scope:'started', eventCount, eventNames:[...], confirmed, attended, absent, rate}`，只計 `Status=Active` 且 `EventStart <= now` 的活動之 `Confirmed`；`absent = confirmed - attended`；`rate` 1 位小數（分母 0 → 0） |
+| 不變 | `totals.confirmed` / `totals.attended`、`byEvent` 及其餘欄位語意不變；v1.1 行為（必須參加、點名時序、自動報名、白名單驗證）全部保留 |
+| 已知限制 | 既有 v1.1 種子中 `HostID` 的老師（如 `T001`、`T002`）本無報名紀錄；若把已報名學生以 `updateUserRole` 改為 Teacher，其歷史報名保留但不可再新增／取消（角色檢查為 `role !== 'Student'`） |

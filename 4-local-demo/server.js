@@ -19,7 +19,7 @@ var fs = require('fs');
 var path = require('path');
 var urlLib = require('url');
 
-var VERSION = '1.1';
+var VERSION = '1.2';
 var TZ = 'Asia/Hong_Kong';
 var PORT = parseInt(process.env.PORT, 10) || 8787;
 var API_PREFIX = '/api';
@@ -136,6 +136,11 @@ function validateOptionList(value, options, label) {
     fail('VALIDATION_ERROR', label + '含無效值：' + bad.join(','));
   }
   return good.length > 0 ? good.join(',') : 'ALL';
+}
+
+/** 契约 8.2 rule 欄位：不限 → 'ALL'，有限制 → 陣列（例 ["1A","1B"]） */
+function previewRuleValue(normalized) {
+  return isAll(normalized) ? 'ALL' : splitList(normalized);
 }
 
 /* =============================================================================
@@ -611,6 +616,11 @@ ACTIONS.registerEvent = function (p) {
   var user = getUser(userID);
   if (!user) fail('NOT_AUTHORIZED', '未授權的操作（使用者不存在）');
 
+  // 1.5 契约 8.1：报名是学生的行为，教师／管理员账号不需报名
+  if (user.role !== 'Student') {
+    fail('ROLE_NOT_ALLOWED', '只有學生可以報名活動（教師／管理員帳號不需報名）');
+  }
+
   // 2. 资格校验
   var elig = checkEligibility(user, ev);
   if (!elig.eligible) fail('NOT_ELIGIBLE', '不符合報名資格（' + elig.reason + '）');
@@ -679,6 +689,12 @@ ACTIONS.cancelRegistration = function (p) {
 
   var user = getUser(userID);
   if (!user) fail('NOT_AUTHORIZED', '未授權的操作（使用者不存在）');
+
+  // 契约 8.1：報名／取消都只限學生（在活動存在、必須參加等檢查之前）
+  if (user.role !== 'Student') {
+    fail('ROLE_NOT_ALLOWED', '只有學生可以報名活動（教師／管理員帳號不需報名）');
+  }
+
   var ev = getEvent(eventID);
   if (!ev) fail('NOT_FOUND', '活動不存在');
 
@@ -876,6 +892,54 @@ function validateEventPayload(payload) {
   };
 }
 
+/* v1.2 8.2 previewEligibility (GET) —— 资格 chips 预览 */
+ACTIONS.previewEligibility = function (p) {
+  requireOperator(p.userID, ['Teacher', 'Admin'], '未授權的操作（只限老師或管理員）');
+
+  // 白名单校验同 manageEvent（契约 7.2 / 8.2），非法值 → VALIDATION_ERROR
+  var classes = validateOptionList(p.classes, CLASS_OPTIONS, '允許班級');
+  var grades = validateOptionList(p.grades, GRADE_OPTIONS, '允許年級');
+  var clubs = validateOptionList(p.clubs, CLUB_OPTIONS, '允許學會');
+  var requireOfficer = boolParam(p.requireOfficer);
+
+  // 把「条件」当成虚拟活动，直接复用 checkEligibility 的 AND/OR 语义
+  var filterEvent = {
+    eligibleClasses: classes,
+    eligibleGrades: grades,
+    eligibleClubs: clubs,
+    requireOfficer: requireOfficer
+  };
+
+  var students = [];
+  var count = 0;
+  DATA.users.forEach(function (u) {
+    if (u.role !== 'Student') return;
+    if (!checkEligibility(u, filterEvent).eligible) return;
+    count++;
+    if (students.length < 20) {
+      students.push({
+        userID: u.userID,
+        name: u.name,
+        className: u.class,
+        grade: u.grade,
+        clubs: splitList(u.club)
+      });
+    }
+  });
+
+  return ok({
+    count: count,
+    students: students,
+    rule: {
+      classes: previewRuleValue(classes),
+      grades: previewRuleValue(grades),
+      clubs: previewRuleValue(clubs),
+      requireOfficer: requireOfficer
+    },
+    text: '符合條件學生共 ' + count + ' 人'
+  });
+};
+
 /* 3.8 getParticipantList (GET) */
 ACTIONS.getParticipantList = function (p) {
   var operator = requireOperator(p.userID, ['Teacher', 'Admin'], '未授權的操作（只限老師或管理員）');
@@ -944,7 +1008,14 @@ ACTIONS.getDashboardStats = function (p) {
   var now = nowStr();
 
   var activeEventList = events.filter(function (e) { return e.status === 'Active'; });
-  var startedEvents = activeEventList.filter(function (e) { return e.eventStart <= now; }).length;
+  var startedEvents = 0;
+  var startedEventNames = [];
+  activeEventList.forEach(function (e) {
+    if (e.eventStart <= now) {
+      startedEvents++;
+      startedEventNames.push(e.name);
+    }
+  });
   var pendingEvents = activeEventList.length - startedEvents;
 
   var confirmed = regs.filter(function (r) { return r.status === 'Confirmed'; });
@@ -970,7 +1041,17 @@ ACTIONS.getDashboardStats = function (p) {
     attended: attendedCount,
     attendanceRate: startedConfirmed > 0 ? Math.round((startedAttended / startedConfirmed) * 1000) / 10 : 0,
     users: DATA.users.length,
-    students: DATA.users.filter(function (u) { return u.role === 'Student'; }).length
+    students: DATA.users.filter(function (u) { return u.role === 'Student'; }).length,
+    // 契约 8.3：只计「已开始的 Active 活动」的 Confirmed，供前端出席情况饼图
+    attendance: {
+      scope: 'started',
+      eventCount: startedEvents,
+      eventNames: startedEventNames,
+      confirmed: startedConfirmed,
+      attended: startedAttended,
+      absent: startedConfirmed - startedAttended,
+      rate: startedConfirmed > 0 ? Math.round((startedAttended / startedConfirmed) * 1000) / 10 : 0
+    }
   };
 
   // byClass：按学生班级统计参与人次（非 Cancelled 报名）
@@ -1307,7 +1388,7 @@ server.listen(PORT, '127.0.0.1', function () {
   console.log('              T002 / teacher123    （老師·黃老師）');
   console.log('              S2201~S2205 / student123（學生）');
   console.log('   種子資料 ：8 用戶 / 10 活動 / 17 報名 / 4 紅日（記憶體，重啟即重置）');
-  console.log('   版本     ：v' + VERSION + '（含必須參加活動、白名單、點名時序、統計口徑）');
+  console.log('   版本     ：v' + VERSION + '（含必須參加、白名單、點名時序、只限學生報名、資格預覽、統計口徑）');
   console.log('   停止服務 ：Ctrl + C');
   console.log('============================================================');
 });

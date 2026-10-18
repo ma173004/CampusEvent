@@ -171,14 +171,15 @@
 
   <!-- ===== 活動新增 / 修改 Modal ===== -->
   <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="eventModalTitle">新增活動</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
         </div>
-        <form id="eventForm" novalidate>
-          <div class="modal-body">
+        <!-- v1.2：form 直接當 modal-body（Bootstrap 可滾動 Modal 需要 flex 子項），
+             footer 移出 form 以固定於底部；送出按鈕用 form="eventForm" 關聯。 -->
+        <form id="eventForm" novalidate class="modal-body">
             <div class="row g-3">
               <div class="col-md-8">
                 <label class="form-label" for="evName">活動名稱 <span class="text-danger">*</span></label>
@@ -234,7 +235,7 @@
                 <label class="form-label d-block" id="evClassesLabel">允許班級</label>
                 <div class="chip-group" id="evClassesGroup" data-chip-group="classes"
                   role="group" aria-labelledby="evClassesLabel"></div>
-                <div class="chip-group-hint">不勾選＝全部班級（只能點選，不能輸入文字）</div>
+                <div class="chip-group-hint">同一欄可多選，符合任一項即可；不同欄要同時符合。不勾選＝該欄不限。</div>
                 <div class="chip-group-actions">
                   <button type="button" class="btn btn-ces-ghost" data-chip-all="classes">全選</button>
                   <button type="button" class="btn btn-ces-ghost" data-chip-none="classes">清除</button>
@@ -244,7 +245,7 @@
                 <label class="form-label d-block" id="evGradesLabel">允許年級</label>
                 <div class="chip-group" id="evGradesGroup" data-chip-group="grades"
                   role="group" aria-labelledby="evGradesLabel"></div>
-                <div class="chip-group-hint">不勾選＝全部年級（只能點選，不能輸入文字）</div>
+                <div class="chip-group-hint">同一欄可多選，符合任一項即可；不同欄要同時符合。不勾選＝該欄不限。</div>
                 <div class="chip-group-actions">
                   <button type="button" class="btn btn-ces-ghost" data-chip-all="grades">全選</button>
                   <button type="button" class="btn btn-ces-ghost" data-chip-none="grades">清除</button>
@@ -254,11 +255,16 @@
                 <label class="form-label d-block" id="evClubsLabel">允許學會</label>
                 <div class="chip-group" id="evClubsGroup" data-chip-group="clubs"
                   role="group" aria-labelledby="evClubsLabel"></div>
-                <div class="chip-group-hint">不勾選＝全部學會（只能點選，不能輸入文字）</div>
+                <div class="chip-group-hint">同一欄可多選，符合任一項即可；不同欄要同時符合。不勾選＝該欄不限。</div>
                 <div class="chip-group-actions">
                   <button type="button" class="btn btn-ces-ghost" data-chip-all="clubs">全選</button>
                   <button type="button" class="btn btn-ces-ghost" data-chip-none="clubs">清除</button>
                 </div>
+              </div>
+
+              <!-- v1.2：資格人數即時預覽（契約 8.2 / 8.5，防抖 400ms） -->
+              <div class="col-12">
+                <div id="eligibilityPreview" class="small" role="status" aria-live="polite"></div>
               </div>
 
               <div class="col-12 d-none" id="hostFieldWrap">
@@ -290,14 +296,13 @@
                   placeholder="活動內容簡介（選填）"></textarea>
               </div>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-ces-ghost" data-bs-dismiss="modal">取消</button>
-            <button type="submit" class="btn btn-ces-primary" id="eventSubmitBtn">
-              <i class="bi bi-check2"></i> 儲存
-            </button>
-          </div>
         </form>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ces-ghost" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-ces-primary" id="eventSubmitBtn" form="eventForm">
+            <i class="bi bi-check2"></i> 儲存
+          </button>
+        </div>
       </div>
     </div>
   </div>

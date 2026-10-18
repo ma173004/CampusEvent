@@ -93,6 +93,9 @@ function handleRequest_(params) {
       case 'getParticipantList': result = getParticipantList_(params); break;
       case 'markAttendance': result = markAttendance_(params); break;
 
+      // v1.2 8.2（资格预览，Teacher/Admin）
+      case 'previewEligibility': result = previewEligibility_(params); break;
+
       // 3.10（统计）
       case 'getDashboardStats': result = getDashboardStats_(params); break;
 

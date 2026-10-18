@@ -22,6 +22,9 @@
     return '<span class="badge-mandatory"><i class="bi bi-exclamation-circle-fill"></i>必須參加</span>';
   }
 
+  /* v1.2：只有學生參與報名；教師／管理員不渲染任何報名按鈕 */
+  function isStudentUser(u) { return !!u && u.role === 'Student'; }
+
   function hasStarted(e, now) {
     if (e && typeof e.started === 'boolean') return e.started;
     return !!(e && e.eventStart && e.eventStart <= now);
@@ -303,7 +306,10 @@
         : ('名額 ' + (e.registeredCount || 0) + ' / ' + e.maxQuota);
 
       var action;
-      if (e.myStatus === 'Confirmed' || e.myStatus === 'Waitlist') {
+      if (!isStudentUser(user)) {
+        /* v1.2：非學生帳號只顯示「詳情」，不渲染報名按鈕 */
+        action = '<a class="btn btn-sm btn-ces-ghost" href="' + detail + '">詳情</a>';
+      } else if (e.myStatus === 'Confirmed' || e.myStatus === 'Waitlist') {
         action = '<a class="btn btn-sm btn-ces-ghost" href="' + detail + '">詳情</a>';
       } else if (e.isEligible !== false && e.isRegOpen === true) {
         action = '<button type="button" class="btn btn-sm btn-ces-primary" data-register="' +
@@ -342,6 +348,12 @@
   /* ---------- 快速報名（含撞期二次確認） ---------- */
   function registerEvent(eventID, btn) {
     if (!eventID) return;
+    if (!isStudentUser(user)) {
+      /* v1.2：非學生帳號不參與報名（正常情況不會有按鈕可觸發） */
+      CES_UI.toast('教師／管理員帳號不參與學生報名', 'info');
+      if (btn) btn.disabled = false;
+      return;
+    }
     API.registerEvent(eventID, user.userID, false).then(onRegisterSuccess).catch(function (err) {
       if (err && err.code === 'CONFLICT') {
         var conflicts = (err.data && err.data.conflicts) || [];
