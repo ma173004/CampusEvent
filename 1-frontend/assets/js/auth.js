@@ -88,7 +88,8 @@
         '<div class="container-xxl">' +
         '<a class="navbar-brand d-flex align-items-center gap-2" href="dashboard.html">' +
         '<img src="assets/img/logo.png" alt="logo" class="ces-logo">' +
-        '<span class="ces-brand-text">校園活動管理系統</span></a>' +
+        '<span class="ces-brand-text">校園活動管理系統' +
+        '<span class="ces-brand-sub">馬君霖 · ICT SBA 專題研習</span></span></a>' +
         '<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#cesNavCollapse">' +
         '<span class="navbar-toggler-icon"></span></button>' +
         '<div class="collapse navbar-collapse" id="cesNavCollapse">' +

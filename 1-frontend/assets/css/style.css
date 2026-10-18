@@ -451,3 +451,63 @@ a { text-decoration: none; }
   .col-class, .col-grade, .col-regtime { display: none; }
   .table-ces th, .table-ces td { padding: .5rem .4rem; font-size: .82rem; }
 }
+
+/* ==========================================================================
+ * 15c. v1.3 —— 署名、浮水印、月曆走馬燈
+ * ========================================================================== */
+
+/* --- 署名（導覽列品牌） --- */
+.ces-brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.ces-brand-sub {
+  font-size: .6rem; font-weight: 600; letter-spacing: .4px;
+  color: rgba(255, 255, 255, .72); margin-top: 2px;
+}
+.ces-login-brand-sub {
+  font-size: .72rem; font-weight: 600; letter-spacing: .5px;
+  color: rgba(255, 255, 255, .8); display: block; margin-top: 2px;
+}
+@media (max-width: 575.98px) {
+  .ces-brand-sub { font-size: .55rem; letter-spacing: .2px; }
+}
+
+/* --- 全站浮水印（證明作者、避免抄襲；列印時也保留） --- */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: url("../img/watermark.svg");
+  background-repeat: repeat;
+  background-size: 460px 300px;
+  opacity: .055;
+  mix-blend-mode: multiply;
+}
+@media print {
+  body::before { opacity: .14; }
+}
+
+/* 浮水印之下仍要能操作：導覽列、modal、toast 疊在水印上 */
+.ces-navbar, .navbar.sticky-top { z-index: 1030; }
+.modal, .modal-backdrop, .toast-container, .ces-toast-wrap { z-index: 1050; }
+
+/* --- 月曆事件文字走馬燈（窄螢幕時活動名稱／時間不會被截斷） --- */
+.ces-mq-host { overflow: hidden; }
+.ces-mq {
+  display: inline-block;
+  white-space: nowrap;
+  will-change: transform;
+  animation-name: ces-mq-run;
+  animation-duration: 8s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  animation-delay: 1.2s;
+}
+@keyframes ces-mq-run {
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--mq, 0)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ces-mq { animation: none; }
+}

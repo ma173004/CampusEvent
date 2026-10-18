@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="300" viewBox="0 0 460 300">
+  <g fill="#0f3557" font-family="'Microsoft JhengHei','Noto Sans TC','PingFang TC',sans-serif">
+    <g transform="translate(0 0) rotate(-24 230 150)">
+      <text x="40" y="130" font-size="30" font-weight="700" letter-spacing="2">馬君霖 · ICT SBA</text>
+      <text x="40" y="168" font-size="17" font-weight="500" letter-spacing="1">校園活動管理系統 2026</text>
+    </g>
+    <g transform="translate(0 150) rotate(-24 230 150)">
+      <text x="230" y="120" font-size="30" font-weight="700" letter-spacing="2">馬君霖 · ICT SBA</text>
+      <text x="230" y="158" font-size="17" font-weight="500" letter-spacing="1">校園活動管理系統 2026</text>
+    </g>
+  </g>
+</svg>

@@ -232,11 +232,47 @@
         if (info.event.start) tip.push('開始：' + fmtDateTime(info.event.start));
         if (info.event.end) tip.push('結束：' + fmtDateTime(info.event.end));
         info.el.setAttribute('title', tip.join('\n'));
+        // 事件剛掛上 DOM 時寬度還不穩定，等一拍再量
+        requestAnimationFrame(function () { setupMarquee(info.el); });
       }
     });
 
     calendarInstance.render();
+    setTimeout(function () { setupMarquee(); }, 350);
   }
+
+  /* ---------- 活動名稱走馬燈（窄螢幕時文字不會被截斷） ---------- */
+  function setupMarquee(rootEl) {
+    var scope = rootEl || document;
+    var titles = scope.querySelectorAll('.fc-event-title');
+    Array.prototype.forEach.call(titles, function (el) {
+      var span = el.querySelector('.ces-mq');
+      if (!span) {
+        var text = (el.textContent || '').trim();
+        if (!text) return;
+        el.classList.add('ces-mq-host');
+        span = document.createElement('span');
+        span.className = 'ces-mq';
+        span.textContent = text;
+        el.textContent = '';
+        el.appendChild(span);
+      }
+      var over = span.scrollWidth - el.clientWidth;
+      if (over > 4) {
+        span.style.setProperty('--mq', (-over) + 'px');
+        span.style.animationDuration = Math.max(6, Math.round(over / 14) + 5) + 's';
+        span.style.removeProperty('animation-name');
+      } else {
+        span.style.animation = 'none';
+      }
+    });
+  }
+
+  var resizeTimer = null;
+  window.addEventListener('resize', function () {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () { setupMarquee(); }, 250);
+  });
 
   function fmtDateTime(d) {
     if (!d || isNaN(d.getTime())) return '';

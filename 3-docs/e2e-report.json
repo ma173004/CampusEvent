@@ -1,5 +1,5 @@
 {
-  "summary": "68/68",
+  "summary": "70/70",
   "results": [
     {
       "name": "login: 表單與版面渲染",
@@ -323,6 +323,16 @@
       "name": "v1.2 UI: 手機版後台清單不用左右滑（操作鈕在畫面內、名額顯示在名稱下方）",
       "pass": true,
       "detail": "{\"scrollW\":375,\"innerW\":375,\"btnRight\":336,\"quotaNote\":true,\"catShown\":\"none\"}"
+    },
+    {
+      "name": "v1.3: 頁面標題與導覽列有「馬君霖 · ICT SBA」署名＋全站浮水印存在且不擋操作",
+      "pass": true,
+      "detail": "{\"title\":\"主頁 · 校園活動管理系統 · 馬君霖 ICT SBA\",\"brand\":\"校園活動管理系統 馬君霖 · ICT SBA 專題研習\",\"wm\":true,\"wmPE\":\"none\",\"wmOpacity\":\"0.055\"}"
+    },
+    {
+      "name": "v1.3: 手機版月曆活動名稱走馬燈（橫向自動滾動、不撐寬頁面）",
+      "pass": true,
+      "detail": "{\"count\":10,\"running\":8,\"dist\":\"-83px\",\"scrollW\":375,\"innerW\":375}"
     },
     {
       "name": "權限: 未登入訪問 admin 跳轉登入頁",
