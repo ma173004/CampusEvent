@@ -67,7 +67,21 @@ CampusEventSystem/
 | `07_测试报告与验收.md` | 自動化測試結果（76/76）、手動驗收腳本、已修問題與已知限制 |
 | `08_GitHub使用教學.md` | 從註冊 GitHub、推上專案、啟用 Pages 到日常 commit 的完整教學 |
 | `09_系统架构说明.md` | **系統架構白皮書**：分層架構、14 個 API 權限表、資料模型、狀態機、報名/取消/點名流程、設計決策與部署拓撲（含 mermaid 圖，適合直接放進 SBA 報告） |
+| `10_系统架构图.html` | **互動式架構圖**（單一 HTML，離線可用）：可直接給評審看，也可匯出 PNG 放進報告 |
 | `screenshots/` | 27 張實際執行截圖（登入、主頁、列表、詳情、後台、點名、統計、手機版、v1.4 橫幅） |
+
+---
+
+## 二之一、架構一眼看懂
+
+![系統架構圖](3-docs/screenshots/28-architecture-diagram.png)
+
+- **前端（瀏覽器）**：6 個靜態頁面共用 `assets/`（`style.css`、`api.js`、`auth.js`、`calendar.js`、`event.js`、`admin.js`）。沒有任何建置步驟，GitHub Pages 直接托管。
+- **唯一的後端出入口**：`api.js` 把請求送到「後端根網址」，其餘頁面只呼叫 `api.js`。所以切換「本機 mock ↔ GAS 雲端」只改一個常數（或 `localStorage.ces_api_base`）。
+- **Google Apps Script 單入口**：`doGet`／`doPost` 收到 `action` 後分派到 14 個 API；7 個 `.gs` 分別負責路由、認證、活動、報名、統計、觸發器、工具。
+- **資料庫＝Google 試算表 4 張工作表**：`Users`（帳號角色）、`Events`（活動與資格）、`Registrations`（報名、候補、出席）、`Holidays`（紅日）。刪除採軟刪除（`Status=Cancelled`），歷史不會消失。
+- **時間只有一個來源**：後端回傳 `now`，前端用它決定「今日」、月曆初始月份與報名／點名按鈕狀態，避免瀏覽器時區造成前後端判斷不一致（v1.4）。
+- **詳細版**：`3-docs/09_系统架构说明.md`（含權限矩陣、狀態機、報名八步流程、設計決策）；互動式版本：`3-docs/10_系统架构图.html`。
 
 ---
 
