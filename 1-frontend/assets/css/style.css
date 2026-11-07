@@ -592,3 +592,59 @@ body::before {
 @media print {
   .ces-banner-host { display: none; }
 }
+/* =========================================================
+ * 17. v1.5 篩選列與活動狀態徽章
+ * =======================================================*/
+.filter-row { row-gap: .5rem; }
+.filter-field { min-width: 9.5rem; }
+.filter-field .form-select,
+.filter-field .form-control { min-width: 9.5rem; }
+.filter-active { font-size: .8rem; color: var(--ces-muted); }
+.filter-active.is-on {
+  color: var(--ces-teal-2);
+  font-weight: 600;
+}
+.filter-active.is-on::before {
+  content: "\F26E";
+  font-family: "bootstrap-icons";
+  margin-right: .2rem;
+}
+
+/* 活動狀態：進行中 / 未進行（未開始） / 已結束 */
+.tag-status {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: .74rem; font-weight: 600;
+  padding: .16rem .55rem; border-radius: 999px;
+  white-space: nowrap;
+}
+.tag-status.is-live {
+  background: rgba(21, 128, 61, .14); color: #146c39;
+  border: 1px solid rgba(21, 128, 61, .28);
+}
+.tag-status.is-live::before {
+  content: ""; width: .42rem; height: .42rem; border-radius: 50%;
+  background: #15803d; box-shadow: 0 0 0 2px rgba(21, 128, 61, .18);
+}
+.tag-status.is-upcoming {
+  background: rgba(180, 83, 9, .14); color: #8a4708;
+  border: 1px solid rgba(180, 83, 9, .26);
+}
+.tag-status.is-ended {
+  background: rgba(100, 116, 139, .14); color: #475569;
+  border: 1px solid rgba(100, 116, 139, .26);
+}
+.att-filter-bar {
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+  padding: .55rem .7rem; margin-bottom: .75rem;
+  background: rgba(48, 146, 192, .06);
+  border: 1px dashed rgba(31, 111, 158, .35);
+  border-radius: var(--ces-radius);
+}
+.att-filter-bar .nav-pills .nav-link {
+  font-size: .8rem; padding: .2rem .65rem;
+}
+@media (max-width: 575.98px) {
+  .filter-field { min-width: 46%; flex: 1 1 46%; }
+  .filter-field .form-select,
+  .filter-field .form-control { min-width: 0; width: 100%; }
+}

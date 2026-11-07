@@ -212,8 +212,43 @@
     tab: 'all',
     keyword: '',
     sort: 'time',
+    category: '',
+    location: '',
+    dateFrom: '',
+    dateTo: '',
     loading: false
   };
+
+  /* v1.5：資格白名單上限（用於估算「資格範圍」大小） */
+  var SCOPE_TOTALS = { classes: 24, grades: 6, clubs: 10 };
+
+  /** 「ALL」/ 空字串 → true（該欄不限） */
+  function isUnlimited(v) {
+    var s = (v === undefined || v === null) ? '' : String(v).trim();
+    return s === '' || s.toUpperCase() === 'ALL';
+  }
+
+  /** 逗號字串 → 陣列（不限時回空陣列） */
+  function splitScope(v) {
+    if (isUnlimited(v)) return [];
+    return String(v).split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+
+  /**
+   * v1.5：資格「範圍大小」估計值（0–1，越大越寬鬆）。
+   * 同欄 OR、跨欄 AND → 以各欄覆蓋比例相乘近似；僅限幹事再乘 0.25。
+   */
+  function eligibilityBreadth(e) {
+    var ratio = 1;
+    var classes = splitScope(e.eligibleClasses);
+    if (classes.length) ratio *= Math.min(1, classes.length / SCOPE_TOTALS.classes);
+    var grades = splitScope(e.eligibleGrades);
+    if (grades.length) ratio *= Math.min(1, grades.length / SCOPE_TOTALS.grades);
+    var clubs = splitScope(e.eligibleClubs);
+    if (clubs.length) ratio *= Math.min(1, clubs.length / SCOPE_TOTALS.clubs);
+    if (e.requireOfficer) ratio *= 0.25;
+    return ratio;
+  }
 
   function initEventsPage() {
     var user = CES_AUTH.requireLogin();
@@ -253,8 +288,68 @@
     var sort = document.getElementById('sortSelect');
     if (sort) {
       sort.addEventListener('change', function () {
-        listState.sort = sort.value === 'latest' ? 'latest' : 'time';
-        loadEvents();
+        /* v1.5：排序改在前端做，切換後不必重新打 API */
+        listState.sort = sort.value || 'time';
+        renderEventsList();
+      });
+    }
+
+    /* v1.5：多維篩選（類別 / 地點 / 時間段） */
+    var catSel = document.getElementById('filterCategory');
+    if (catSel) {
+      catSel.addEventListener('change', function () {
+        listState.category = catSel.value;
+        renderEventsList();
+      });
+    }
+    var locSel = document.getElementById('filterLocation');
+    if (locSel) {
+      locSel.addEventListener('change', function () {
+        listState.location = locSel.value;
+        renderEventsList();
+      });
+    }
+    var fromEl = document.getElementById('filterFrom');
+    if (fromEl) {
+      fromEl.addEventListener('change', function () {
+        listState.dateFrom = fromEl.value || '';
+        if (listState.dateTo && listState.dateFrom && listState.dateFrom > listState.dateTo) {
+          listState.dateTo = listState.dateFrom;
+          var toFix = document.getElementById('filterTo');
+          if (toFix) toFix.value = listState.dateTo;
+        }
+        renderEventsList();
+      });
+    }
+    var toEl = document.getElementById('filterTo');
+    if (toEl) {
+      toEl.addEventListener('change', function () {
+        listState.dateTo = toEl.value || '';
+        if (listState.dateFrom && listState.dateTo && listState.dateFrom > listState.dateTo) {
+          listState.dateFrom = listState.dateTo;
+          var fromFix = document.getElementById('filterFrom');
+          if (fromFix) fromFix.value = listState.dateFrom;
+        }
+        renderEventsList();
+      });
+    }
+    var resetBtn = document.getElementById('filterReset');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        listState.category = '';
+        listState.location = '';
+        listState.dateFrom = '';
+        listState.dateTo = '';
+        listState.keyword = '';
+        listState.sort = 'time';
+        if (catSel) catSel.value = '';
+        if (locSel) locSel.value = '';
+        if (fromEl) fromEl.value = '';
+        if (toEl) toEl.value = '';
+        if (sort) sort.value = 'time';
+        var search = document.getElementById('searchInput');
+        if (search) search.value = '';
+        renderEventsList();
       });
     }
 
@@ -312,13 +407,14 @@
     listState.loading = true;
     setEventsLoading(true);
 
-    API.getEvents({ userID: listState.user.userID, sort: listState.sort }).then(function (data) {
+    API.getEvents({ userID: listState.user.userID, sort: 'time' }).then(function (data) {
       listState.events = (data && data.events) || [];
       listState.now = (data && data.now) || nowText();
       setEventsLoading(false);
       listState.loading = false;
       var panel = document.getElementById('eventsPanel');
       if (panel) panel.classList.remove('d-none');
+      fillFilterOptions();
       renderEventsList();
     }).catch(function (err) {
       listState.loading = false;
@@ -357,10 +453,99 @@
     return haystack.indexOf(listState.keyword) !== -1;
   }
 
-  function renderEventsList() {
-    var list = listState.events.filter(function (e) {
-      return matchTab(e) && matchKeyword(e);
+  /** v1.5：類別 / 地點 / 時間段 篩選 */
+  function matchFilters(e) {
+    if (listState.category && e.category !== listState.category) return false;
+    if (listState.location && e.location !== listState.location) return false;
+    var day = String(e.eventStart || '').slice(0, 10); // YYYY-MM-DD
+    if (listState.dateFrom && day < listState.dateFrom) return false;
+    if (listState.dateTo && day > listState.dateTo) return false;
+    return true;
+  }
+
+  /** v1.5：把目前資料集的類別 / 地點填進下拉（保留已選值） */
+  function fillFilterOptions() {
+    var catSel = document.getElementById('filterCategory');
+    var locSel = document.getElementById('filterLocation');
+
+    function unique(key) {
+      var seen = {};
+      var out = [];
+      for (var i = 0; i < listState.events.length; i++) {
+        var v = listState.events[i][key];
+        if (!v || seen[v]) continue;
+        seen[v] = 1;
+        out.push(v);
+      }
+      out.sort(function (a, b) { return a.localeCompare(b, 'zh-Hant'); });
+      return out;
+    }
+
+    if (catSel) {
+      var keepCat = listState.category;
+      catSel.innerHTML = '<option value="">全部類別</option>' + unique('category').map(function (c) {
+        return '<option value="' + esc(c) + '">' + esc(c) + '</option>';
+      }).join('');
+      catSel.value = keepCat;
+      if (catSel.value !== keepCat) listState.category = catSel.value;
+    }
+    if (locSel) {
+      var keepLoc = listState.location;
+      locSel.innerHTML = '<option value="">全部地點</option>' + unique('location').map(function (l) {
+        return '<option value="' + esc(l) + '">' + esc(l) + '</option>';
+      }).join('');
+      locSel.value = keepLoc;
+      if (locSel.value !== keepLoc) listState.location = locSel.value;
+    }
+  }
+
+  /** v1.5：排序（時間雙向 / 資格範圍雙向 / 最新） */
+  function sortEvents(list) {
+    var out = list.slice();
+    var mode = listState.sort;
+    if (mode === 'latest') {
+      out.sort(function (a, b) {
+        if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1;
+        return a.eventID < b.eventID ? 1 : -1;
+      });
+      return out;
+    }
+    if (mode === 'eligDesc' || mode === 'eligAsc') {
+      var dir = mode === 'eligDesc' ? -1 : 1;
+      out.sort(function (a, b) {
+        var d = eligibilityBreadth(a) - eligibilityBreadth(b);
+        if (d !== 0) return d * dir;
+        if (a.eventStart !== b.eventStart) return a.eventStart < b.eventStart ? -1 : 1;
+        return a.eventID < b.eventID ? -1 : 1;
+      });
+      return out;
+    }
+    /* time（近→遠，即活動開始時間遞增）／timeDesc（遠→近） */
+    var tdir = mode === 'timeDesc' ? -1 : 1;
+    out.sort(function (a, b) {
+      if (a.eventStart !== b.eventStart) {
+        return (a.eventStart < b.eventStart ? -1 : 1) * tdir;
+      }
+      return a.eventID < b.eventID ? -1 : 1;
     });
+    return out;
+  }
+
+  /** v1.5：目前生效的篩選摘要（給「共 N 個活動」用） */
+  function activeFilterText() {
+    var parts = [];
+    if (listState.keyword) parts.push('搜尋：' + listState.keyword);
+    if (listState.category) parts.push('類別：' + listState.category);
+    if (listState.location) parts.push('地點：' + listState.location);
+    if (listState.dateFrom) parts.push('起：' + listState.dateFrom);
+    if (listState.dateTo) parts.push('迄：' + listState.dateTo);
+    return parts.length ? '（' + parts.join('｜') + '）' : '';
+  }
+
+  function renderEventsList() {
+    var list = sortEvents(listState.events.filter(function (e) {
+      return matchTab(e) && matchKeyword(e) && matchFilters(e);
+    }));
 
     var tbody = document.getElementById('eventsTableBody');
     var cards = document.getElementById('eventsCards');
@@ -380,8 +565,13 @@
     }
 
     if (countEl) {
-      countEl.textContent = '共 ' + list.length + ' 個活動' +
-        (listState.keyword ? '（搜尋：' + listState.keyword + '）' : '');
+      countEl.textContent = '共 ' + list.length + ' 個活動' + activeFilterText();
+    }
+    var hintEl = document.getElementById('filterActiveHint');
+    if (hintEl) {
+      var hasFilter = !!(listState.category || listState.location || listState.dateFrom || listState.dateTo);
+      hintEl.textContent = hasFilter ? '已套用篩選' : '';
+      hintEl.classList.toggle('is-on', hasFilter);
     }
 
     var panel = document.getElementById('eventsPanel');

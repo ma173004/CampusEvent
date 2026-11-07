@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
@@ -79,11 +79,36 @@
           <div class="ces-card-title">
             <span><i class="bi bi-people me-1"></i>報名名單與點名</span>
           </div>
+          <!-- v1.5：選擇活動前先篩選（關鍵字 + 狀態） -->
+          <div class="att-filter-bar">
+            <div class="input-group input-group-sm" style="max-width: 15rem;" role="search">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input type="search" class="form-control" id="attFilterKeyword"
+                     placeholder="搜尋活動名稱 / 編號" aria-label="搜尋活動">
+            </div>
+            <ul class="nav nav-pills gap-1" id="attStatusFilter" role="tablist" aria-label="依狀態篩選活動">
+              <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link active" data-status="all" role="tab" aria-selected="true">全部</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link" data-status="live" role="tab" aria-selected="false">進行中</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link" data-status="upcoming" role="tab" aria-selected="false">未進行</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link" data-status="ended" role="tab" aria-selected="false">已結束</button>
+              </li>
+            </ul>
+            <span class="muted small" id="attFilterCount"></span>
+          </div>
+
           <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
             <label class="form-label mb-0 small fw-semibold" for="participantSelect">選擇活動</label>
             <select class="form-select form-select-sm" id="participantSelect" style="max-width: 26rem;">
               <option value="">（載入中…）</option>
             </select>
+            <span id="participantStatusBadge"></span>
             <span class="muted small" id="participantHint"></span>
           </div>
           <div id="participantQuota" class="mb-1"></div>

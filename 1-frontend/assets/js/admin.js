@@ -182,6 +182,8 @@
     if (!$('adminTabs')) return;
 
     var allEvents = [];          // getEvents 原始資料
+    var eventsNow = '';          // v1.5：後端目前時間（判斷進行中／未進行／已結束）
+    var attFilter = { keyword: '', status: 'all' }; // v1.5：點名頁活動篩選
     var eventModal = null;       // Bootstrap Modal 實例
     var editingEventID = null;   // null=新增，否則=修改
     var hostOptionsLoaded = false;
@@ -239,7 +241,32 @@
 
     var participantSelect = $('participantSelect');
     if (participantSelect) {
-      participantSelect.addEventListener('change', function () { loadParticipants(); });
+      participantSelect.addEventListener('change', function () {
+        loadParticipants();
+      });
+    }
+
+    /* v1.5：點名頁活動篩選（關鍵字 + 狀態） */
+    var attKeyword = $('attFilterKeyword');
+    if (attKeyword) {
+      attKeyword.addEventListener('input', function () {
+        attFilter.keyword = attKeyword.value.trim().toLowerCase();
+        fillParticipantSelect();
+      });
+    }
+    var attStatusTabs = $('attStatusFilter');
+    if (attStatusTabs) {
+      attStatusTabs.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-status]');
+        if (!btn) return;
+        attFilter.status = btn.getAttribute('data-status') || 'all';
+        Array.prototype.forEach.call(attStatusTabs.querySelectorAll('[data-status]'), function (b) {
+          var active = b === btn;
+          b.classList.toggle('active', active);
+          b.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        fillParticipantSelect();
+      });
     }
 
     var confirmedBody = $('confirmedTableBody');
@@ -276,6 +303,7 @@
       if (tbody) tbody.innerHTML = loadingRow(8);
       return API.getEvents({ userID: user.userID }).then(function (data) {
         allEvents = (data && data.events) || [];
+        eventsNow = (data && data.now) || '';
         renderEventTable();
         fillParticipantSelect();
       }).catch(function (err) {
@@ -729,6 +757,36 @@
 
     /* ============ 報名與點名 ============ */
 
+    /* ---------- v1.5：活動狀態（進行中 / 未進行 / 已結束） ---------- */
+
+    /** @return {'live'|'upcoming'|'ended'} */
+    function eventPhase(ev) {
+      if (!ev) return 'upcoming';
+      var now = eventsNow;
+      if (now && ev.eventStart && ev.eventStart > now) return 'upcoming';
+      if (now && ev.eventEnd && ev.eventEnd < now) return 'ended';
+      if (ev.started === false && !(now && ev.eventEnd && ev.eventEnd < now)) return 'upcoming';
+      return 'live';
+    }
+
+    function phaseLabel(phase) {
+      if (phase === 'live') return '進行中';
+      if (phase === 'ended') return '已結束';
+      return '未進行';
+    }
+
+    function phaseBadge(phase) {
+      if (phase === 'live') return '<span class="tag-status is-live">進行中</span>';
+      if (phase === 'ended') return '<span class="tag-status is-ended">已結束</span>';
+      return '<span class="tag-status is-upcoming">未進行（未開始）</span>';
+    }
+
+    function renderStatusBadge(ev) {
+      var host = $('participantStatusBadge');
+      if (!host) return;
+      host.innerHTML = ev ? phaseBadge(eventPhase(ev)) : '';
+    }
+
     function fillParticipantSelect() {
       var sel = $('participantSelect');
       if (!sel) return;
@@ -739,7 +797,23 @@
         active = active.filter(function (ev) { return ev.hostID === user.userID; });
       }
 
+      /* v1.5：關鍵字 + 狀態篩選 */
+      var keyword = attFilter.keyword;
+      var status = attFilter.status;
+      var list = active.filter(function (ev) {
+        if (status !== 'all' && eventPhase(ev) !== status) return false;
+        if (keyword) {
+          var hay = [ev.name, ev.eventID, ev.location, ev.category].join(' ').toLowerCase();
+          if (hay.indexOf(keyword) === -1) return false;
+        }
+        return true;
+      });
+
       var hintEl = $('participantHint');
+      var countEl = $('attFilterCount');
+      if (countEl) {
+        countEl.textContent = '符合 ' + list.length + ' / 共 ' + active.length + ' 個活動';
+      }
 
       if (!active.length) {
         sel.innerHTML = '<option value="">（暫無可管理的活動）</option>';
@@ -747,19 +821,44 @@
         if (hintEl) {
           hintEl.textContent = isAdmin ? '目前沒有開放中的活動' : '您目前沒有負責的開放中活動';
         }
+        renderStatusBadge(null);
         renderQuota(null);
         clearParticipantTables('暫無活動可顯示');
         return;
       }
 
-      sel.disabled = false;
-      sel.innerHTML = active.map(function (ev) {
-        return '<option value="' + esc(ev.eventID) + '">' +
-          esc(ev.name + '（' + CES_UI.fmtDT(ev.eventStart) + '）') + '</option>';
-      }).join('');
+      if (!list.length) {
+        sel.innerHTML = '<option value="">（沒有符合篩選條件的活動）</option>';
+        sel.disabled = true;
+        if (hintEl) hintEl.textContent = '請調整關鍵字或狀態篩選';
+        renderStatusBadge(null);
+        renderQuota(null);
+        clearParticipantTables('沒有符合篩選條件的活動');
+        return;
+      }
 
-      var keep = active.some(function (ev) { return ev.eventID === prev; });
-      if (keep) sel.value = prev;
+      sel.disabled = false;
+      /* 依狀態分組：進行中 → 未進行 → 已結束，選項前綴狀態文字 */
+      var order = ['live', 'upcoming', 'ended'];
+      var groups = { live: [], upcoming: [], ended: [] };
+      for (var i = 0; i < list.length; i++) groups[eventPhase(list[i])].push(list[i]);
+
+      var html = '';
+      for (var g = 0; g < order.length; g++) {
+        var phase = order[g];
+        if (!groups[phase].length) continue;
+        html += '<optgroup label="' + phaseLabel(phase) + '（' + groups[phase].length + '）">' +
+          groups[phase].map(function (ev) {
+            return '<option value="' + esc(ev.eventID) + '">' +
+              '【' + phaseLabel(eventPhase(ev)) + '】' +
+              esc(ev.name + '（' + CES_UI.fmtDT(ev.eventStart) + '）') + '</option>';
+          }).join('') +
+          '</optgroup>';
+      }
+      sel.innerHTML = html;
+
+      var keep = list.some(function (ev) { return ev.eventID === prev; });
+      sel.value = keep ? prev : list[0].eventID;
 
       loadParticipants();
     }
@@ -771,6 +870,7 @@
       if (w) w.innerHTML = emptyRow(5, text || '暫無資料');
       participantsEvent = null;
       renderNotice(null);
+      renderStatusBadge(null);
     }
 
     function loadParticipants() {
@@ -844,6 +944,7 @@
 
       participantsEvent = ev;
       renderNotice(ev);
+      renderStatusBadge(ev);
 
       var hintEl = $('participantHint');
       if (hintEl) hintEl.textContent = ev.name ? ('目前活動：' + ev.name) : '';

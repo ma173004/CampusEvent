@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
@@ -49,8 +49,39 @@
         </div>
         <select class="form-select form-select-sm w-auto" id="sortSelect" aria-label="排序方式">
           <option value="time">時間（近→遠）</option>
+          <option value="timeDesc">時間（遠→近）</option>
+          <option value="eligDesc">資格（大範圍→小範圍）</option>
+          <option value="eligAsc">資格（小範圍→大範圍）</option>
           <option value="latest">最新（新建立優先）</option>
         </select>
+      </div>
+
+      <!-- v1.5：多維篩選（類別 / 地點 / 時間段） -->
+      <div class="filter-row mt-2 d-flex flex-wrap align-items-end gap-2">
+        <div class="filter-field">
+          <label class="form-label small mb-1" for="filterCategory">類別</label>
+          <select class="form-select form-select-sm" id="filterCategory" aria-label="依類別篩選">
+            <option value="">全部類別</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="form-label small mb-1" for="filterLocation">地點</label>
+          <select class="form-select form-select-sm" id="filterLocation" aria-label="依地點篩選">
+            <option value="">全部地點</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="form-label small mb-1" for="filterFrom">活動日期（起）</label>
+          <input type="date" class="form-control form-control-sm" id="filterFrom" aria-label="活動日期起">
+        </div>
+        <div class="filter-field">
+          <label class="form-label small mb-1" for="filterTo">活動日期（迄）</label>
+          <input type="date" class="form-control form-control-sm" id="filterTo" aria-label="活動日期迄">
+        </div>
+        <button type="button" class="btn btn-sm btn-ces-ghost" id="filterReset">
+          <i class="bi bi-x-circle"></i> 清除篩選
+        </button>
+        <div class="ms-auto filter-active" id="filterActiveHint"></div>
       </div>
     </div>
 
