@@ -533,3 +533,63 @@ CLUB_OPTIONS  = ['學生會','美術學會','體育學會','音樂學會','戲�
 - 只用於 `4-local-demo/server.js`：`$env:CES_NOW='2026-10-18 09:00'; node 4-local-demo\server.js`。
 - 影響 `nowStr()` / `nowStamp()`（即報名窗口、活動是否開始、點名時序、統計口徑、`getCalendarData.now`）。
 - 未設定時跟隨系統時鐘；GAS 版本沒有此變數。測試腳本一律搭配 `CES_NOW='2026-10-18 09:00'` 執行以確保結果可重現。
+---
+
+## 十、v1.5 變更（活動篩選）
+
+> v1.5 **沒有變更任何後端 API**（純前端功能），因此 GAS **不必重新部署**；mock server 版本仍為 1.4。
+
+### 10.1 活動列表的多維篩選（`events.html`）
+
+全部在前端完成（`1-frontend/assets/js/event.js` → `listState` / `matchFilters` / `sortEvents`），不新增 API 參數：
+
+| 控制項 | id | 型別 | 說明 |
+| --- | --- | --- | --- |
+| 類別 | `#filterCategory` | `<select>` | 由目前載入的活動動態產生（`全部類別` 為空值） |
+| 地點 | `#filterLocation` | `<select>` | 同上（`全部地點`） |
+| 活動日期（起） | `#filterFrom` | `<input type="date">` | 與 `eventStart` 的前 10 碼（`YYYY-MM-DD`）比較，含當日 |
+| 活動日期（迄） | `#filterTo` | `<input type="date">` | 同上；起 > 迄時自動對齊 |
+| 清除篩選 | `#filterReset` | `<button>` | 同時清空關鍵字、類別、地點、日期與排序 |
+| 生效提示 | `#filterActiveHint` | `<div>` | 有任一篩選時顯示「已套用篩選」 |
+
+排序（`#sortSelect`）在前端處理，選項值：
+
+| value | 顯示 | 規則 |
+| --- | --- | --- |
+| `time` | 時間（近→遠） | `eventStart` 升冪 |
+| `timeDesc` | 時間（遠→近） | `eventStart` 降冪 |
+| `eligDesc` | 資格（大範圍→小範圍） | 資格覆蓋率降冪 |
+| `eligAsc` | 資格（小範圍→大範圍） | 資格覆蓋率升冪 |
+| `latest` | 最新（新建立優先） | `createdAt` 降冪 |
+
+**資格覆蓋率（`eligibilityBreadth`）**：以「該活動有多少比例的學生符合」近似，0–1，越大越寬鬆。
+
+```
+ratio = 1
+若 eligibleClasses 有限制 → ratio *= min(1, 班級數 / 24)
+若 eligibleGrades  有限制 → ratio *= min(1, 年級數 / 6)
+若 eligibleClubs   有限制 → ratio *= min(1, 學會數 / 10)
+若 requireOfficer          → ratio *= 0.25
+```
+
+> 白名單上限（24／6／10）與契約 7.2 一致；`ALL`／空字串視為該欄不限。
+
+### 10.2 點名頁的活動選擇器（`admin.html` → 報名與點名）
+
+| 控制項 | id | 說明 |
+| --- | --- | --- |
+| 關鍵字 | `#attFilterKeyword` | 比對活動名稱／編號／地點／類別 |
+| 狀態篩選 | `#attStatusFilter`（`data-status` = `all`／`live`／`upcoming`／`ended`） | 純前端過濾 |
+| 符合數量 | `#attFilterCount` | 「符合 N / 共 M 個活動」 |
+| 活動下拉 | `#participantSelect` | 依狀態用 `<optgroup>` 分組，選項文字前綴 `【進行中】`／`【未進行】`／`【已結束】` |
+| 狀態徽章 | `#participantStatusBadge` | `.tag-status.is-live`／`.is-upcoming`／`.is-ended` |
+
+**狀態判定**（以 `getEvents` 回傳的 `now` 與活動時間比較）：
+
+| 狀態 | 條件 | 徽章樣式 |
+| --- | --- | --- |
+| 進行中 `live` | `eventStart <= now <= eventEnd` | `.tag-status.is-live`（綠） |
+| 未進行 `upcoming` | `now < eventStart` | `.tag-status.is-upcoming`（橙） |
+| 已結束 `ended` | `now > eventEnd` | `.tag-status.is-ended`（灰） |
+
+> 「已開始但未結束」仍可點名；「未進行」維持 v1.1 的鎖定（`.lock-note`）。
