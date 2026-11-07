@@ -19,12 +19,22 @@ var fs = require('fs');
 var path = require('path');
 var urlLib = require('url');
 
-var VERSION = '1.2';
+var VERSION = '1.4';
 var TZ = 'Asia/Hong_Kong';
 var PORT = parseInt(process.env.PORT, 10) || 8787;
 var API_PREFIX = '/api';
 var FRONTEND_ROOT = path.resolve(__dirname, '..', '1-frontend');
 var BODY_LIMIT = 1024 * 1024; // 1MB，防止异常大请求
+
+/* 示範／測試用固定時鐘：CES_NOW='2026-10-18 09:00' 可讓種子資料永遠「未來可報名」。
+   不設定時使用真實時間（一般本機示範）。 */
+var NOW_OVERRIDE = process.env.CES_NOW ? String(process.env.CES_NOW).trim().replace(' ', 'T') : '';
+
+function clockNow() {
+  if (!NOW_OVERRIDE) return new Date();
+  var d = new Date(NOW_OVERRIDE);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
 
 /* =============================================================================
  * 一、通用工具（对应 GAS 07_Utils.gs）
@@ -42,7 +52,7 @@ function pad3(n) {
 
 /** 当前时间字符串 'YYYY-MM-DD HH:mm'（固定 Asia/Hong_Kong，与契约一致） */
 function nowStr() {
-  return formatDateTime(new Date());
+  return formatDateTime(clockNow());
 }
 
 /** Date -> 'YYYY-MM-DD HH:mm'（Asia/Hong_Kong） */
@@ -509,7 +519,7 @@ function nowStamp() {
   var parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-  }).formatToParts(new Date());
+  }).formatToParts(clockNow());
   var map = {};
   parts.forEach(function (p) { map[p.type] = p.value; });
   var hour = map.hour === '24' ? '00' : map.hour;
@@ -596,7 +606,7 @@ ACTIONS.getCalendarData = function (p) {
     };
   });
 
-  return ok({ holidays: holidays, events: events });
+  return ok({ holidays: holidays, events: events, now: nowStr() });
 };
 
 /* 3.5 registerEvent (POST) —— 严格按契约顺序，命中即返回 */
@@ -1388,7 +1398,7 @@ server.listen(PORT, '127.0.0.1', function () {
   console.log('              T002 / teacher123    （老師·黃老師）');
   console.log('              S2201~S2205 / student123（學生）');
   console.log('   種子資料 ：8 用戶 / 10 活動 / 17 報名 / 4 紅日（記憶體，重啟即重置）');
-  console.log('   版本     ：v' + VERSION + '（含必須參加、白名單、點名時序、只限學生報名、資格預覽、統計口徑）');
+  console.log('   版本     ：v' + VERSION + '（含必須參加、白名單、點名時序、只限學生報名、資格預覽、統計口徑、Modal 疊放修正、報名橫幅）');
   console.log('   停止服務 ：Ctrl + C');
   console.log('============================================================');
 });

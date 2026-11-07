@@ -489,7 +489,12 @@ body::before {
 
 /* 浮水印之下仍要能操作：導覽列、modal、toast 疊在水印上 */
 .ces-navbar, .navbar.sticky-top { z-index: 1030; }
-.modal, .modal-backdrop, .toast-container, .ces-toast-wrap { z-index: 1050; }
+/* v1.4 修正：modal 必須高於 backdrop，否則 backdrop 會蓋住整個彈窗
+   （Bootstrap 預設 backdrop 1050 < modal 1055；v1.3 誤將兩者都設為 1050，
+   造成「新增活動」彈窗灰屏、完全不能點擊）。 */
+.modal { z-index: 1055; }
+.modal-backdrop { z-index: 1050; }
+.toast-container, .ces-toast-wrap { z-index: 1090; }
 
 /* --- 月曆事件文字走馬燈（窄螢幕時活動名稱／時間不會被截斷） --- */
 .ces-mq-host { overflow: hidden; }
@@ -510,4 +515,80 @@ body::before {
 }
 @media (prefers-reduced-motion: reduce) {
   .ces-mq { animation: none; }
+}
+
+/* ==========================================================================
+ * 16. v1.4 —— 頁面頂部橫幅（重要操作結果，取代右上角小 toast）
+ * ========================================================================== */
+.ces-banner-host {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 1045;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.ces-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  width: 100%;
+  padding: .85rem 1.25rem;
+  overflow: hidden;
+  color: #fff;
+  font-size: .95rem;
+  font-weight: 600;
+  background: linear-gradient(100deg, #157347, #1a9d5b);
+  box-shadow: 0 8px 20px rgba(15, 53, 87, .2);
+  animation: ces-banner-in .3s ease-out;
+  pointer-events: auto;
+}
+.ces-banner-warning { background: linear-gradient(100deg, #8a5a00, #d19a0b); }
+.ces-banner-danger { background: linear-gradient(100deg, #8a1124, #c0233c); }
+.ces-banner-info { background: linear-gradient(100deg, #1f6f9e, #3092c0); }
+.ces-banner.is-leaving { animation: ces-banner-out .26s ease-in forwards; }
+.ces-banner-icon { font-size: 1.15rem; flex: 0 0 auto; }
+.ces-banner-text { flex: 1 1 auto; }
+.ces-banner-link {
+  flex: 0 0 auto;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+.ces-banner-link:hover { color: #fff; opacity: .85; }
+.ces-banner-close {
+  flex: 0 0 auto;
+  opacity: .95;
+  filter: invert(1) grayscale(1) brightness(2.4);
+}
+.ces-banner-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: rgba(255, 255, 255, .6);
+  transform-origin: left center;
+  animation: ces-banner-bar 5.2s linear forwards;
+}
+@keyframes ces-banner-in {
+  from { transform: translateY(-100%); opacity: .35; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+@keyframes ces-banner-out {
+  to { transform: translateY(-100%); opacity: 0; }
+}
+@keyframes ces-banner-bar {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+@media (max-width: 575.98px) {
+  .ces-banner { font-size: .86rem; padding: .72rem .95rem; gap: .5rem; }
+  .ces-banner-link { display: none; }
+}
+@media print {
+  .ces-banner-host { display: none; }
 }

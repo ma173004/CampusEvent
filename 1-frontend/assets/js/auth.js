@@ -139,6 +139,64 @@
       el.addEventListener('hidden.bs.toast', function () { el.remove(); });
     },
 
+    /* 頁面頂部橫幅（重要操作結果；固定在導覽列下方，預設 5.2 秒後自動收起） */
+    banner: function (message, type, opts) {
+      type = type || 'success';
+      opts = opts || {};
+      var icons = {
+        success: 'bi-check-circle-fill',
+        warning: 'bi-exclamation-triangle-fill',
+        danger: 'bi-x-octagon-fill',
+        info: 'bi-info-circle-fill'
+      };
+      var nav = document.getElementById('ces-nav');
+      var top = 0;
+      if (nav) {
+        var rect = nav.getBoundingClientRect();
+        /* sticky 導覽列被捲走時，橫幅改貼齊視窗頂端 */
+        top = Math.max(0, Math.round(rect.bottom));
+      }
+      var duration = opts.duration || 5200;
+      var host = document.getElementById('cesBannerHost');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'cesBannerHost';
+        host.className = 'ces-banner-host';
+        document.body.appendChild(host);
+      }
+      host.style.top = top + 'px';
+      host.innerHTML = '';
+      var el = document.createElement('div');
+      el.className = 'ces-banner ces-banner-' + type;
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      el.innerHTML =
+        '<i class="bi ' + (icons[type] || icons.info) + ' ces-banner-icon" aria-hidden="true"></i>' +
+        '<span class="ces-banner-text">' + CES_UI.escapeHtml(message) + '</span>' +
+        (opts.link
+          ? '<a class="ces-banner-link" href="' + CES_UI.escapeHtml(opts.link.href) + '">' +
+            CES_UI.escapeHtml(opts.link.text || '查看') + ' <i class="bi bi-arrow-right" aria-hidden="true"></i></a>'
+          : '') +
+        '<button type="button" class="btn-close ces-banner-close" aria-label="關閉提示"></button>' +
+        '<span class="ces-banner-bar" aria-hidden="true"></span>';
+      host.appendChild(el);
+
+      var closed = false;
+      var timer = null;
+      function close() {
+        if (closed) return;
+        closed = true;
+        if (timer) { clearTimeout(timer); timer = null; }
+        el.classList.add('is-leaving');
+        setTimeout(function () { if (host && host.parentNode) host.innerHTML = ''; }, 260);
+      }
+      el.querySelector('.ces-banner-close').addEventListener('click', close);
+      timer = setTimeout(close, duration);
+      el.addEventListener('mouseenter', function () { if (timer) { clearTimeout(timer); timer = null; } });
+      el.addEventListener('mouseleave', function () { if (!closed) timer = setTimeout(close, 2200); });
+      return el;
+    },
+
     /* 通用确认框，返回 Promise<boolean> */
     confirmDialog: function (opts) {
       opts = opts || {};

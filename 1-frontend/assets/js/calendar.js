@@ -48,6 +48,15 @@
     return isNaN(d.getTime()) ? null : d;
   }
 
+  /* v1.4：頁面「今天」一律以後端時間為準
+     （後端可能是 GAS / mock server，時區或測試時鐘都可能與瀏覽器不同；
+      報名窗口、活動是否開始也都由後端判定，前端跟著後端才不會前後矛盾） */
+  var serverNow = null;             // 後端回傳的 'YYYY-MM-DD HH:mm'
+  function clockDate() {
+    var d = serverNow ? parseDT(serverNow) : null;
+    return d || new Date();
+  }
+
   function timeLabel(str) {
     var d = parseDT(str);
     if (!d) return '';
@@ -96,7 +105,7 @@
         esc(CES_UI.roleLabel(user.role)) + '</span>';
     }
     if (sub) sub.textContent = '以下是你的校園活動概況，點擊月曆上的活動可查看詳情。';
-    if (dateEl) dateEl.textContent = '今日：' + dateLabel(new Date());
+    if (dateEl) dateEl.textContent = '今日：' + dateLabel(clockDate());
     if (roleEl) roleEl.textContent = (user.userID || '') + (user.grade ? ' · ' + user.grade : '') +
       (user['class'] ? ' · ' + user['class'] : '');
   }
@@ -117,6 +126,10 @@
     ]).then(function (res) {
       var calData = res[0] || {};
       var evData = res[1] || {};
+      /* v1.4：用後端的「今天」決定月曆初始月份，避免瀏覽器與伺服器日期不一致時看到錯的月份 */
+      if (calData.now) serverNow = String(calData.now);
+      var heroDate = document.getElementById('heroDate');
+      if (heroDate) heroDate.textContent = '今日：' + dateLabel(clockDate());
       CES_UI.loading(calEl, false);
       CES_UI.loading(listEl, false);
       buildCalendar(calEl, calData);
@@ -199,6 +212,7 @@
     calendarInstance = new FullCalendar.Calendar(el, {
       locale: 'zh-tw',
       initialView: 'dayGridMonth',
+      initialDate: clockDate(),
       firstDay: 1,
       height: 'auto',
       fixedWeekCount: false,

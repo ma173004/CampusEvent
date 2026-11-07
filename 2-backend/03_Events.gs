@@ -117,7 +117,7 @@ function getCalendarData_(params) {
     });
   }
 
-  return okEnvelope_({ holidays: holidayList, events: eventList });
+  return okEnvelope_({ holidays: holidayList, events: eventList, now: now });
 }
 
 /* ============================== 3.7 manageEvent (POST) ============================== */

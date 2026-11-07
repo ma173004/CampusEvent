@@ -1,5 +1,5 @@
 {
-  "summary": "70/70",
+  "summary": "76/76",
   "results": [
     {
       "name": "login: 表單與版面渲染",
@@ -63,9 +63,9 @@
       "detail": "clicked:立即報名 → 系統檢測到你當天已有以下活動，仍要報名嗎？  旅行日介紹工作坊（2026/10/20 09:00 至 12:00）"
     },
     {
-      "name": "detail: 撞期確認後報名成功",
+      "name": "detail: 撞期確認後報名成功（頁面橫幅）",
       "pass": true,
-      "detail": "報名成功 / 狀態=[\"已確認\",\"已報名\"]"
+      "detail": "報名成功！已加入「圖書館導賞」 / 狀態=[\"已確認\",\"已報名\"]"
     },
     {
       "name": "detail: 已報名狀態與取消按鈕",
@@ -333,6 +333,36 @@
       "name": "v1.3: 手機版月曆活動名稱走馬燈（橫向自動滾動、不撐寬頁面）",
       "pass": true,
       "detail": "{\"count\":10,\"running\":8,\"dist\":\"-83px\",\"scrollW\":375,\"innerW\":375}"
+    },
+    {
+      "name": "v1.4: 新增活動彈窗沒被 backdrop 蓋住（可點擊，非灰屏）",
+      "pass": true,
+      "detail": "{\"open\":true,\"modalZ\":1055,\"backdropZ\":1050,\"hitInside\":true,\"hitTag\":\"DIV\"}"
+    },
+    {
+      "name": "v1.4: 彈窗內資格 chip 可用真實滑鼠點選（pointer-events 正常）",
+      "pass": true,
+      "detail": "1A true → false"
+    },
+    {
+      "name": "v1.4: 關閉彈窗後沒有殘留灰色遮罩",
+      "pass": true,
+      "detail": "{\"backdrop\":0,\"open\":false}"
+    },
+    {
+      "name": "v1.4: 報名成功改用頁面頂部橫幅（附「查看我的活動」連結）",
+      "pass": true,
+      "detail": "{\"found\":true,\"text\":\"報名成功！已加入「校園攝影工作坊」查看我的活動\",\"cls\":\"ces-banner ces-banner-success\",\"width\":1425,\"top\":64,\"navBottom\":64,\"link\":\"查看我的活動\"}"
+    },
+    {
+      "name": "v1.4: 手機版報名橫幅滿版且不撐寬頁面",
+      "pass": true,
+      "detail": "{\"found\":true,\"width\":375,\"scrollW\":375,\"innerW\":375}"
+    },
+    {
+      "name": "v1.4: 取消報名也用頁面頂部橫幅",
+      "pass": true,
+      "detail": "{\"found\":true,\"text\":\"已取消報名\",\"cls\":\"ces-banner ces-banner-success\"}"
     },
     {
       "name": "權限: 未登入訪問 admin 跳轉登入頁",

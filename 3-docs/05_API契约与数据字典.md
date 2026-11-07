@@ -484,3 +484,52 @@ CLUB_OPTIONS  = ['學生會','美術學會','體育學會','音樂學會','戲�
 - 新增／修改活動的 Modal 必須可滾動：`modal-dialog` 加 `modal-dialog-scrollable`（或等效 `max-height` + `overflow-y:auto`），確保在 768px 以下高度的視窗仍能按到「儲存」。footer 固定可見。
 - 資格 chips 每組下方說明改為：「同一欄可多選，符合任一項即可；不同欄要同時符合。不勾選＝該欄不限。」
 - chips 變更後（防抖 400ms）呼叫 `previewEligibility`，在表單內顯示：「符合條件的學生：N 人（例：王小明 5A、李小花 5B）」；`N = 0` 時顯示紅色警告。
+
+---
+
+## 九、v1.4 變更（第三輪回饋：灰屏、報名橫幅、時間一致性）
+
+### 9.1 `getCalendarData` 回傳新增 `now`
+
+原本「今日」與月曆初始月份由前端各自用瀏覽器 `new Date()` 決定，和後端的報名窗口／點名時序判斷可能不一致（時區、裝置時間、測試固定時鐘都會造成差異）。v1.4 起時間只有一個來源：後端。
+
+- `data` 追加：
+
+  ```json
+  {
+    "holidays": [{ "date": "2026-10-01", "name": "國慶日" }],
+    "events": [{ "eventID": "20261019a", "name": "升旗禮", "start": "2026-10-19 08:00", "end": "2026-10-19 08:30", "isMandatory": true }],
+    "now": "2026-10-18 09:00"
+  }
+  ```
+
+  - `now` 字串格式同全站：`YYYY-MM-DD HH:mm`。
+  - 前端 `calendar.js` 以 `now` 解析出 `clockDate()`，供主頁「今日」、FullCalendar `initialDate`（決定打開哪一個月）使用；`now` 缺失時才退回瀏覽器時間。
+  - GAS 與 mock server 都必須回這個欄位（GAS 需重新部署才會生效）。
+
+### 9.2 前端 UX 規範：操作結果用「頁面橫幅」而非小 toast
+
+- 報名成功／加入候補／取消報名 → 呼叫 `CES_UI.banner(message, type, { link })`，在**導覽列正下方**顯示全寬橫幅：
+  - 成功 `type='success'`（綠色）、候補 `'warning'`（琥珀色）、錯誤維持 toast（避免遮蔽內容）。
+  - 內容含圖示、訊息、可選連結（`opts.link`，本專案用「查看我的活動」）、右側關閉鈕。
+  - 預設 5.2 秒自動收起、附進度條；滑鼠移入暫停計時；`role="status" aria-live="polite"`。
+  - 手機（375px）滿版且不得撐寬頁面。
+- 錯誤訊息（`handleActionError`）仍用 toast，避免打斷正在填寫的表單。
+
+### 9.3 圖層（z-index）階梯（前端必須遵守，否則會出現「灰屏卡住」）
+
+| 元素 | z-index | 說明 |
+| --- | --- | --- |
+| `.ces-navbar` / `.navbar.sticky-top` | 1030 | 導覽列 |
+| `.ces-banner-host` | 1045 | 報名結果橫幅（在導覽列下方，不遮住導覽列） |
+| `.modal-backdrop` | 1050 | 彈窗遮罩（必須低於 `.modal`） |
+| `.modal` | 1055 | 彈窗本體 |
+| `.toast-container` / `.ces-toast-wrap` | 1090 | 小提示 |
+
+> 事故記錄：v1.3 曾把 `.modal`、`.modal-backdrop`、`.toast-container` 一起設成 `z-index: 1050`。Bootstrap 把遮罩插在 body 尾端（彈窗之後），同層時後者蓋前者 → 整個彈窗變成灰色、完全點不到（GitHub Pages 上一樣）。v1.4 改回上表階梯，e2e 以 `document.elementFromPoint(彈窗中心)` 斷言命中彈窗內部，並用 CDP 真實滑鼠點 chips 驗證可互動。
+
+### 9.4 本機 mock 的固定時鐘（`CES_NOW`）
+
+- 只用於 `4-local-demo/server.js`：`$env:CES_NOW='2026-10-18 09:00'; node 4-local-demo\server.js`。
+- 影響 `nowStr()` / `nowStamp()`（即報名窗口、活動是否開始、點名時序、統計口徑、`getCalendarData.now`）。
+- 未設定時跟隨系統時鐘；GAS 版本沒有此變數。測試腳本一律搭配 `CES_NOW='2026-10-18 09:00'` 執行以確保結果可重現。

@@ -129,9 +129,16 @@
     });
   }
 
-  function onRegisterSuccess(data, onSuccess) {
+  /* v1.4：報名結果改用頁面頂部橫幅（比右上角 toast 更明顯、不會壓住導覽列） */
+  function onRegisterSuccess(data, onSuccess, eventName) {
     var waitlist = data && data.status === 'Waitlist';
-    CES_UI.toast(waitlist ? '名額已滿，已加入候補名單' : '報名成功', waitlist ? 'warning' : 'success');
+    var named = eventName ? '「' + eventName + '」' : '';
+    var link = { href: 'dashboard.html', text: '查看我的活動' };
+    if (waitlist) {
+      CES_UI.banner('名額已滿，已加入候補名單' + (named ? '：' + named : ''), 'warning', { link: link });
+    } else {
+      CES_UI.banner('報名成功！' + (named ? '已加入' + named : '已加入你的活動清單'), 'success', { link: link });
+    }
     if (onSuccess) onSuccess();
   }
 
@@ -141,8 +148,9 @@
    * @param {object} user
    * @param {function} onSuccess 成功後回呼
    * @param {function} onSettled 成功或失敗後都回呼（用於恢復按鈕狀態）
+   * @param {string} [eventName] 活動名稱（用於橫幅文案）
    */
-  function doRegister(eventID, user, onSuccess, onSettled) {
+  function doRegister(eventID, user, onSuccess, onSettled, eventName) {
     function done() { if (onSettled) onSettled(); }
 
     if (!isStudentUser(user)) {
@@ -153,14 +161,14 @@
     }
 
     API.registerEvent(eventID, user.userID, false).then(function (data) {
-      onRegisterSuccess(data, onSuccess);
+      onRegisterSuccess(data, onSuccess, eventName);
       done();
     }).catch(function (err) {
       if (err && err.code === 'CONFLICT') {
         confirmConflict(err).then(function (ok) {
           if (!ok) { done(); return; }
           API.registerEvent(eventID, user.userID, true).then(function (data) {
-            onRegisterSuccess(data, onSuccess);
+            onRegisterSuccess(data, onSuccess, eventName);
             done();
           }).catch(function (e2) {
             handleActionError(e2);
@@ -188,7 +196,7 @@
         if (data && data.promoted) {
           msg += '；候補者 ' + (data.promoted.name || data.promoted.userID) + ' 已自動遞補';
         }
-        CES_UI.toast(msg, 'success');
+        CES_UI.banner(msg, 'success');
         if (onSuccess) onSuccess();
       }).catch(handleActionError);
     });
@@ -265,7 +273,7 @@
             loadEvents();
           }, function () {
             btn.disabled = false;
-          });
+          }, e.name);
         } else if (action === 'cancel') {
           doCancel(eventID, listState.user, e.name, e.myStatus === 'Waitlist', function () {
             loadEvents();
@@ -537,7 +545,7 @@
           loadDetail();
         }, function () {
           btn.disabled = false;
-        });
+        }, e.name);
       } else if (btn.getAttribute('data-action') === 'cancel') {
         doCancel(eventID, detailState.user, e.name, e.myStatus === 'Waitlist', function () {
           loadDetail();
